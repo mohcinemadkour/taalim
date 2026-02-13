@@ -373,10 +373,11 @@ st.markdown("---")
 col_csv, col_ppt = st.columns(2)
 
 with col_csv:
-    csv = df_filtered.to_csv(index=False)
+    # Add UTF-8 BOM for Excel to recognize Arabic characters
+    csv = '\ufeff' + df_filtered.to_csv(index=False)
     st.download_button(
         label="📥 تحميل البيانات كـ CSV",
-        data=csv,
+        data=csv.encode('utf-8'),
         file_name=f"student_data_statistics.csv",
         mime="text/csv"
     )
