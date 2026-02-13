@@ -167,7 +167,7 @@ rank_labels = {1: '🥇 الأول', 2: '🥈 الثاني', 3: '🥉 الثال
 top_students['الترتيب'] = top_students['الترتيب'].map(rank_labels)
 
 top_display = top_students[['الترتيب', 'اسم التلميذ', 'المعدل', 'نقاط القوة']].copy()
-top_display['المعدل'] = top_display['المعدل'].apply(lambda x: f"{x:.2f}")
+top_display['المعدل'] = top_display['المعدل'].apply(lambda x: f"{float(x):.2f}" if pd.notna(x) else "—")
 
 st.dataframe(top_display, use_container_width=True, hide_index=True)
 
@@ -219,7 +219,7 @@ bottom_students['نقطة قوة'] = bottom_students.apply(
 )
 
 bottom_display = bottom_students[['الترتيب', 'اسم التلميذ', 'المعدل', 'نقطة قوة', 'التحليل']].copy()
-bottom_display['المعدل'] = bottom_display['المعدل'].apply(lambda x: f"{x:.2f}")
+bottom_display['المعدل'] = bottom_display['المعدل'].apply(lambda x: f"{float(x):.2f}" if pd.notna(x) else "—")
 
 st.dataframe(bottom_display, use_container_width=True, hide_index=True)
 
@@ -249,7 +249,7 @@ if len(borderline) > 0:
     ).apply(lambda x: f"{x[0]} ({x[1]:.2f})" if x[0] != "—" else "—")
     
     borderline_display = borderline[['اسم التلميذ', 'المعدل', 'الحالة', 'المادة المؤثرة']].head(10).copy()
-    borderline_display['المعدل'] = borderline_display['المعدل'].apply(lambda x: f"{x:.2f}")
+    borderline_display['المعدل'] = borderline_display['المعدل'].apply(lambda x: f"{float(x):.2f}" if pd.notna(x) else "—")
     
     st.dataframe(borderline_display, use_container_width=True, hide_index=True)
     
