@@ -959,6 +959,246 @@ if french_avg < 10 or english_avg < 10:
 
 st.markdown("---")
 
+# Correlation Analysis
+st.header("🔗 تحليل الارتباط بين المواد")
+
+st.markdown("""
+**تحليل العلاقات:** هل النجاح في مادة معينة يتنبأ بالنجاح في مادة أخرى؟
+- **ارتباط قوي (> 0.7):** العلاقة قوية جداً
+- **ارتباط متوسط (0.4-0.7):** العلاقة معتدلة
+- **ارتباط ضعيف (< 0.4):** العلاقة ضعيفة
+""")
+
+# Get available subjects for correlation
+correlation_subjects = [col for col in subject_columns if col in df_filtered.columns and col != 'المعدل']
+correlation_data = df_filtered[correlation_subjects].dropna()
+
+if len(correlation_data) > 5 and len(correlation_subjects) > 1:
+    # Calculate correlation matrix
+    corr_matrix = correlation_data.corr()
+    
+    # Heatmap visualization
+    st.markdown("### 🗺️ خريطة الارتباط الحرارية")
+    
+    fig = px.imshow(
+        corr_matrix,
+        labels=dict(x="المادة", y="المادة", color="معامل الارتباط"),
+        x=correlation_subjects,
+        y=correlation_subjects,
+        color_continuous_scale='RdBu_r',
+        zmin=-1,
+        zmax=1,
+        aspect='auto'
+    )
+    fig.update_layout(
+        height=500,
+        title="معاملات الارتباط بين المواد الدراسية"
+    )
+    # Add correlation values as text
+    annotations = []
+    for i, row in enumerate(corr_matrix.values):
+        for j, val in enumerate(row):
+            annotations.append(
+                dict(
+                    x=j,
+                    y=i,
+                    text=f"{val:.2f}",
+                    showarrow=False,
+                    font=dict(color='white' if abs(val) > 0.5 else 'black', size=10)
+                )
+            )
+    fig.update_layout(annotations=annotations)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Find strongest correlations (excluding self-correlation)
+    st.markdown("### 📊 أقوى العلاقات بين المواد")
+    
+    # Get upper triangle of correlation matrix (to avoid duplicates)
+    correlations = []
+    for i in range(len(correlation_subjects)):
+        for j in range(i + 1, len(correlation_subjects)):
+            correlations.append({
+                'المادة 1': correlation_subjects[i],
+                'المادة 2': correlation_subjects[j],
+                'معامل الارتباط': corr_matrix.iloc[i, j]
+            })
+    
+    corr_df = pd.DataFrame(correlations)
+    corr_df['قوة الارتباط'] = corr_df['معامل الارتباط'].abs()
+    corr_df = corr_df.sort_values('قوة الارتباط', ascending=False)
+    
+    # Top 5 strongest correlations
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 🔝 أقوى 5 ارتباطات")
+        top_5 = corr_df.head(5)
+        for idx, row in top_5.iterrows():
+            corr_val = row['معامل الارتباط']
+            if corr_val >= 0.7:
+                emoji = "🟢"
+                strength = "قوي جداً"
+            elif corr_val >= 0.4:
+                emoji = "🟡"
+                strength = "متوسط"
+            elif corr_val >= 0:
+                emoji = "🟠"
+                strength = "ضعيف"
+            else:
+                emoji = "🔴"
+                strength = "عكسي"
+            
+            st.markdown(f"{emoji} **{row['المادة 1']}** ↔ **{row['المادة 2']}**: {corr_val:.2f} ({strength})")
+    
+    with col2:
+        st.markdown("#### 📉 أضعف 5 ارتباطات")
+        bottom_5 = corr_df.tail(5).iloc[::-1]
+        for idx, row in bottom_5.iterrows():
+            corr_val = row['معامل الارتباط']
+            if abs(corr_val) < 0.2:
+                emoji = "⚪"
+                strength = "شبه معدوم"
+            elif corr_val < 0:
+                emoji = "🔴"
+                strength = "عكسي"
+            else:
+                emoji = "🟠"
+                strength = "ضعيف"
+            
+            st.markdown(f"{emoji} **{row['المادة 1']}** ↔ **{row['المادة 2']}**: {corr_val:.2f} ({strength})")
+    
+    # Subject-specific correlation analysis
+    st.markdown("### 🎯 تحليل ارتباط كل مادة")
+    
+    selected_subject = st.selectbox(
+        "اختر مادة لعرض ارتباطاتها:",
+        correlation_subjects,
+        key="corr_subject_select"
+    )
+    
+    if selected_subject:
+        subject_corr = corr_matrix[selected_subject].drop(selected_subject).sort_values(ascending=False)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Bar chart of correlations
+            corr_chart_df = pd.DataFrame({
+                'المادة': subject_corr.index,
+                'معامل الارتباط': subject_corr.values
+            })
+            
+            fig = px.bar(
+                corr_chart_df,
+                x='معامل الارتباط',
+                y='المادة',
+                orientation='h',
+                color='معامل الارتباط',
+                color_continuous_scale='RdBu_r',
+                range_color=[-1, 1],
+                text='معامل الارتباط'
+            )
+            fig.update_traces(texttemplate='%{text:.2f}', textposition='outside')
+            fig.update_layout(height=400, title=f"ارتباطات {selected_subject}")
+            fig.add_vline(x=0, line_dash="dash", line_color="gray")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            # Interpretation
+            st.markdown(f"#### 💡 تفسير ارتباطات {selected_subject}")
+            
+            strong_positive = subject_corr[subject_corr >= 0.6]
+            moderate_positive = subject_corr[(subject_corr >= 0.4) & (subject_corr < 0.6)]
+            weak = subject_corr[(subject_corr > -0.4) & (subject_corr < 0.4)]
+            negative = subject_corr[subject_corr <= -0.4]
+            
+            if len(strong_positive) > 0:
+                st.success(f"🟢 **ارتباط قوي مع:** {', '.join(strong_positive.index.tolist())}")
+                st.caption("التلاميذ الجيدون في هذه المادة غالباً جيدون في المواد المذكورة")
+            
+            if len(moderate_positive) > 0:
+                st.info(f"🟡 **ارتباط متوسط مع:** {', '.join(moderate_positive.index.tolist())}")
+            
+            if len(negative) > 0:
+                st.warning(f"🔴 **ارتباط عكسي مع:** {', '.join(negative.index.tolist())}")
+                st.caption("التلاميذ الجيدون في هذه المادة قد يواجهون صعوبة في المواد المذكورة")
+    
+    # Scatter plot for specific pairs
+    st.markdown("### 📈 رسم الانتشار بين مادتين")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        subject_x = st.selectbox("المادة الأولى (المحور الأفقي):", correlation_subjects, key="scatter_x")
+    with col2:
+        remaining_subjects = [s for s in correlation_subjects if s != subject_x]
+        subject_y = st.selectbox("المادة الثانية (المحور العمودي):", remaining_subjects, key="scatter_y")
+    
+    if subject_x and subject_y:
+        scatter_data = df_filtered[[subject_x, subject_y, 'اسم التلميذ']].dropna()
+        
+        if len(scatter_data) > 0:
+            correlation_value = scatter_data[subject_x].corr(scatter_data[subject_y])
+            
+            fig = px.scatter(
+                scatter_data,
+                x=subject_x,
+                y=subject_y,
+                hover_data=['اسم التلميذ'],
+                trendline='ols',
+                color_discrete_sequence=['#636EFA']
+            )
+            fig.update_layout(
+                height=450,
+                title=f"العلاقة بين {subject_x} و {subject_y} (r = {correlation_value:.2f})"
+            )
+            # Add quadrant lines at passing grade
+            fig.add_hline(y=10, line_dash="dash", line_color="green", opacity=0.5)
+            fig.add_vline(x=10, line_dash="dash", line_color="green", opacity=0.5)
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Quadrant analysis
+            both_pass = len(scatter_data[(scatter_data[subject_x] >= 10) & (scatter_data[subject_y] >= 10)])
+            x_only = len(scatter_data[(scatter_data[subject_x] >= 10) & (scatter_data[subject_y] < 10)])
+            y_only = len(scatter_data[(scatter_data[subject_x] < 10) & (scatter_data[subject_y] >= 10)])
+            both_fail = len(scatter_data[(scatter_data[subject_x] < 10) & (scatter_data[subject_y] < 10)])
+            total = len(scatter_data)
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("✅ ناجحون في الاثنين", f"{both_pass} ({both_pass/total*100:.0f}%)")
+            with col2:
+                st.metric(f"📗 ناجحون في {subject_x[:10]}.. فقط", f"{x_only} ({x_only/total*100:.0f}%)")
+            with col3:
+                st.metric(f"📘 ناجحون في {subject_y[:10]}.. فقط", f"{y_only} ({y_only/total*100:.0f}%)")
+            with col4:
+                st.metric("❌ راسبون في الاثنين", f"{both_fail} ({both_fail/total*100:.0f}%)")
+
+    # Insights
+    st.markdown("### 💡 استنتاجات تحليل الارتباط")
+    
+    # Find the most correlated pair
+    if len(corr_df) > 0:
+        strongest = corr_df.iloc[0]
+        weakest = corr_df.iloc[-1]
+        
+        avg_correlation = corr_df['معامل الارتباط'].mean()
+        
+        if avg_correlation >= 0.5:
+            st.success(f"🎯 **ترابط عام قوي:** متوسط الارتباط بين المواد هو {avg_correlation:.2f}. هذا يشير إلى أن التلاميذ المتفوقين يميلون للتفوق في معظم المواد.")
+        elif avg_correlation >= 0.3:
+            st.info(f"📊 **ترابط متوسط:** متوسط الارتباط {avg_correlation:.2f}. بعض المواد مترابطة والبعض الآخر مستقل.")
+        else:
+            st.warning(f"⚠️ **ترابط ضعيف:** متوسط الارتباط {avg_correlation:.2f}. كل مادة تتطلب مهارات مختلفة.")
+        
+        st.caption(f"🔗 أقوى علاقة: {strongest['المادة 1']} ↔ {strongest['المادة 2']} ({strongest['معامل الارتباط']:.2f})")
+        st.caption(f"⛓️ أضعف علاقة: {weakest['المادة 1']} ↔ {weakest['المادة 2']} ({weakest['معامل الارتباط']:.2f})")
+
+else:
+    st.warning("⚠️ لا توجد بيانات كافية لحساب الارتباطات. يجب توفر بيانات 5 تلاميذ على الأقل.")
+
+st.markdown("---")
+
 # Raw Data Table
 st.header("📋 جميع بيانات التلاميذ")
 st.dataframe(df_filtered[['ر.ت', 'رقم التلميذ', 'اسم التلميذ'] + subject_columns], 
