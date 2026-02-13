@@ -1869,15 +1869,17 @@ with col_ppt:
                 title_para.font.bold = True
                 title_para.alignment = PP_ALIGN.CENTER
                 
-                # Table of contents items
+                # Table of contents items - updated with all new features
                 toc_items = [
                     "1. الإحصائيات العامة",
-                    "2. توزيع شرائح المعدلات",
-                    "3. متوسط المعدلات حسب المادة",
-                    "4. توزيع المعدلات",
-                    "5. توزيع المعدلات حسب المادة (مخطط صندوقي)",
-                    "6. أفضل 10 تلاميذ",
-                    "7. أهم الملاحظات"
+                    "2. أفضل وأضعف التلاميذ",
+                    "3. توزيع شرائح المعدلات",
+                    "4. متوسط المعدلات حسب المادة",
+                    "5. مقارنة العلوم والآداب",
+                    "6. فجوة الكفاءة اللغوية",
+                    "7. تحليل الارتباط بين المواد",
+                    "8. التلاميذ المعرضين للخطر",
+                    "9. أهم الملاحظات والتوصيات"
                 ]
                 
                 toc_box = slide.shapes.add_textbox(Inches(2), Inches(1.5), Inches(9), Inches(5))
@@ -1888,7 +1890,7 @@ with col_ppt:
                     p = toc_frame.add_paragraph()
                     p.text = item
                     p.font.size = Pt(24)
-                    p.space_after = Pt(16)
+                    p.space_after = Pt(12)
                 
                 return slide
             
@@ -2100,6 +2102,373 @@ with col_ppt:
                     p.text = line.strip()
                     p.font.size = Pt(24)
                     p.space_after = Pt(12)
+                
+                # ====== NEW SECTIONS ======
+                
+                # Top & Bottom Performers Slide
+                slide = add_content_slide(prs, "🏆 أفضل وأضعف التلاميذ")
+                
+                top_5 = data_df[['اسم التلميذ', 'المعدل']].dropna().nlargest(5, 'المعدل')
+                bottom_5 = data_df[['اسم التلميذ', 'المعدل']].dropna().nsmallest(5, 'المعدل')
+                
+                # Top performers text
+                top_text = "🥇 أفضل 5 تلاميذ:\n"
+                rank_emojis = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣']
+                for i, (idx, row) in enumerate(top_5.iterrows()):
+                    top_text += f"{rank_emojis[i]} {row['اسم التلميذ']}: {row['المعدل']:.2f}\n"
+                
+                top_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.3), Inches(6), Inches(3))
+                top_frame = top_box.text_frame
+                top_frame.word_wrap = True
+                for line in top_text.strip().split('\n'):
+                    p = top_frame.add_paragraph()
+                    p.text = line
+                    p.font.size = Pt(20)
+                    p.space_after = Pt(6)
+                
+                # Bottom performers text
+                bottom_text = "📉 تلاميذ يحتاجون دعماً:\n"
+                for i, (idx, row) in enumerate(bottom_5.iterrows()):
+                    bottom_text += f"• {row['اسم التلميذ']}: {row['المعدل']:.2f}\n"
+                
+                bottom_box = slide.shapes.add_textbox(Inches(6.5), Inches(1.3), Inches(6), Inches(3))
+                bottom_frame = bottom_box.text_frame
+                bottom_frame.word_wrap = True
+                for line in bottom_text.strip().split('\n'):
+                    p = bottom_frame.add_paragraph()
+                    p.text = line
+                    p.font.size = Pt(20)
+                    p.space_after = Pt(6)
+                
+                # Science vs Humanities Slide
+                slide = add_content_slide(prs, "🔬📚 مقارنة العلوم والآداب")
+                
+                science_subjects_ppt = ['الرياضيات', 'علوم الحياة والأرض', 'الفيزياء والكيمياء']
+                humanities_subjects_ppt = ['اللغة العربية', 'اللغة الفرنسية', 'اللغة الإنجليزية', 'الاجتماعيات']
+                
+                science_scores_ppt = []
+                humanities_scores_ppt = []
+                
+                for col in science_subjects_ppt:
+                    if col in data_df.columns:
+                        science_scores_ppt.extend(data_df[col].dropna().tolist())
+                
+                for col in humanities_subjects_ppt:
+                    if col in data_df.columns:
+                        humanities_scores_ppt.extend(data_df[col].dropna().tolist())
+                
+                science_avg_ppt = np.mean(science_scores_ppt) if science_scores_ppt else 0
+                humanities_avg_ppt = np.mean(humanities_scores_ppt) if humanities_scores_ppt else 0
+                diff_ppt = science_avg_ppt - humanities_avg_ppt
+                
+                if diff_ppt > 0.5:
+                    orientation = "توجه علمي"
+                elif diff_ppt < -0.5:
+                    orientation = "توجه أدبي"
+                else:
+                    orientation = "متوازن"
+                
+                sci_hum_text = f"""
+🔬 متوسط المواد العلمية: {science_avg_ppt:.2f}
+(الرياضيات، علوم الحياة والأرض، الفيزياء والكيمياء)
+
+📚 متوسط المواد الأدبية: {humanities_avg_ppt:.2f}
+(العربية، الفرنسية، الإنجليزية، الاجتماعيات)
+
+📊 الفرق: {diff_ppt:.2f} نقطة
+
+🎯 التوجه العام: {orientation}
+                """
+                
+                sci_hum_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.3), Inches(6), Inches(5))
+                sci_hum_frame = sci_hum_box.text_frame
+                sci_hum_frame.word_wrap = True
+                for line in sci_hum_text.strip().split('\n'):
+                    p = sci_hum_frame.add_paragraph()
+                    p.text = line
+                    p.font.size = Pt(22)
+                    p.space_after = Pt(8)
+                
+                # Science vs Humanities bar chart
+                comparison_df_ppt = pd.DataFrame({
+                    'المجال': ['المواد العلمية', 'المواد الأدبية'],
+                    'المتوسط': [science_avg_ppt, humanities_avg_ppt]
+                })
+                
+                fig_comparison = px.bar(
+                    comparison_df_ppt,
+                    x='المجال',
+                    y='المتوسط',
+                    color='المجال',
+                    color_discrete_map={
+                        'المواد العلمية': '#636EFA',
+                        'المواد الأدبية': '#EF553B'
+                    },
+                    text='المتوسط'
+                )
+                fig_comparison.update_traces(texttemplate='%{text:.2f}', textposition='outside')
+                fig_comparison.update_layout(height=400, width=500, showlegend=False)
+                fig_comparison.add_hline(y=10, line_dash="dash", line_color="green")
+                
+                img_stream = fig_to_image(fig_comparison)
+                if img_stream:
+                    slide.shapes.add_picture(img_stream, Inches(6.5), Inches(1.3), width=Inches(6))
+                
+                # Language Proficiency Gap Slide
+                slide = add_content_slide(prs, "🌐 فجوة الكفاءة اللغوية")
+                
+                arabic_avg_ppt = data_df['اللغة العربية'].dropna().mean() if 'اللغة العربية' in data_df.columns else 0
+                french_avg_ppt = data_df['اللغة الفرنسية'].dropna().mean() if 'اللغة الفرنسية' in data_df.columns else 0
+                english_avg_ppt = data_df['اللغة الإنجليزية'].dropna().mean() if 'اللغة الإنجليزية' in data_df.columns else 0
+                foreign_avg_ppt = np.mean([french_avg_ppt, english_avg_ppt]) if (french_avg_ppt > 0 or english_avg_ppt > 0) else 0
+                proficiency_gap_ppt = arabic_avg_ppt - foreign_avg_ppt
+                
+                lang_text = f"""
+🇲🇦 اللغة العربية (اللغة الأم): {arabic_avg_ppt:.2f}
+
+🇫🇷 اللغة الفرنسية: {french_avg_ppt:.2f}
+
+🇬🇧 اللغة الإنجليزية: {english_avg_ppt:.2f}
+
+📊 فجوة الكفاءة (العربية - الأجنبية): {proficiency_gap_ppt:.2f}
+                """
+                
+                if proficiency_gap_ppt > 2:
+                    lang_text += "\n\n⚠️ فجوة كبيرة: التلاميذ يواجهون صعوبة في اللغات الأجنبية"
+                elif proficiency_gap_ppt > 1:
+                    lang_text += "\n\n📊 فجوة متوسطة: يحتاج تعزيز اللغات الأجنبية"
+                else:
+                    lang_text += "\n\n✅ فجوة صغيرة: الأداء متقارب بين اللغات"
+                
+                lang_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.3), Inches(6), Inches(5))
+                lang_frame = lang_box.text_frame
+                lang_frame.word_wrap = True
+                for line in lang_text.strip().split('\n'):
+                    p = lang_frame.add_paragraph()
+                    p.text = line
+                    p.font.size = Pt(22)
+                    p.space_after = Pt(8)
+                
+                # Language comparison bar chart
+                lang_df_ppt = pd.DataFrame({
+                    'اللغة': ['العربية', 'الفرنسية', 'الإنجليزية'],
+                    'المتوسط': [arabic_avg_ppt, french_avg_ppt, english_avg_ppt],
+                    'النوع': ['اللغة الأم', 'لغة أجنبية', 'لغة أجنبية']
+                })
+                
+                fig_lang = px.bar(
+                    lang_df_ppt,
+                    x='اللغة',
+                    y='المتوسط',
+                    color='النوع',
+                    color_discrete_map={
+                        'اللغة الأم': '#00CC96',
+                        'لغة أجنبية': '#EF553B'
+                    },
+                    text='المتوسط'
+                )
+                fig_lang.update_traces(texttemplate='%{text:.2f}', textposition='outside')
+                fig_lang.update_layout(height=400, width=500, showlegend=True)
+                fig_lang.add_hline(y=10, line_dash="dash", line_color="gray")
+                
+                img_stream = fig_to_image(fig_lang)
+                if img_stream:
+                    slide.shapes.add_picture(img_stream, Inches(6.5), Inches(1.3), width=Inches(6))
+                
+                # Correlation Analysis Slide
+                slide = add_content_slide(prs, "🔗 تحليل الارتباط بين المواد")
+                
+                correlation_subjects_ppt = [col for col in subject_columns if col in data_df.columns and col != 'المعدل']
+                correlation_data_ppt = data_df[correlation_subjects_ppt].dropna()
+                
+                if len(correlation_data_ppt) > 5 and len(correlation_subjects_ppt) > 1:
+                    corr_matrix_ppt = correlation_data_ppt.corr()
+                    
+                    # Find strongest correlations
+                    correlations_ppt = []
+                    for i in range(len(correlation_subjects_ppt)):
+                        for j in range(i + 1, len(correlation_subjects_ppt)):
+                            correlations_ppt.append({
+                                'المادة 1': correlation_subjects_ppt[i],
+                                'المادة 2': correlation_subjects_ppt[j],
+                                'الارتباط': corr_matrix_ppt.iloc[i, j]
+                            })
+                    
+                    corr_df_ppt = pd.DataFrame(correlations_ppt)
+                    corr_df_ppt = corr_df_ppt.sort_values('الارتباط', ascending=False, key=abs)
+                    
+                    avg_corr = corr_df_ppt['الارتباط'].mean()
+                    strongest = corr_df_ppt.iloc[0] if len(corr_df_ppt) > 0 else None
+                    weakest = corr_df_ppt.iloc[-1] if len(corr_df_ppt) > 0 else None
+                    
+                    corr_text = f"""
+📊 متوسط الارتباط بين المواد: {avg_corr:.2f}
+
+🔗 أقوى ارتباط:
+{strongest['المادة 1']} ↔ {strongest['المادة 2']}: {strongest['الارتباط']:.2f}
+
+⛓️ أضعف ارتباط:
+{weakest['المادة 1']} ↔ {weakest['المادة 2']}: {weakest['الارتباط']:.2f}
+                    """
+                    
+                    if avg_corr >= 0.5:
+                        corr_text += "\n\n🎯 ترابط عام قوي: المتفوقون يتفوقون في معظم المواد"
+                    elif avg_corr >= 0.3:
+                        corr_text += "\n\n📊 ترابط متوسط: بعض المواد مترابطة"
+                    else:
+                        corr_text += "\n\n⚠️ ترابط ضعيف: كل مادة تتطلب مهارات مختلفة"
+                    
+                    corr_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.3), Inches(6), Inches(5))
+                    corr_frame = corr_box.text_frame
+                    corr_frame.word_wrap = True
+                    for line in corr_text.strip().split('\n'):
+                        p = corr_frame.add_paragraph()
+                        p.text = line
+                        p.font.size = Pt(20)
+                        p.space_after = Pt(6)
+                    
+                    # Correlation heatmap
+                    fig_corr = px.imshow(
+                        corr_matrix_ppt,
+                        labels=dict(x="المادة", y="المادة", color="الارتباط"),
+                        x=correlation_subjects_ppt,
+                        y=correlation_subjects_ppt,
+                        color_continuous_scale='RdBu_r',
+                        zmin=-1,
+                        zmax=1
+                    )
+                    fig_corr.update_layout(height=450, width=500)
+                    
+                    img_stream = fig_to_image(fig_corr)
+                    if img_stream:
+                        slide.shapes.add_picture(img_stream, Inches(6.5), Inches(1.2), width=Inches(6))
+                
+                # At-Risk Students Slide
+                slide = add_content_slide(prs, "🚨 التلاميذ المعرضين للخطر")
+                
+                avg_mean_ppt = data_df['المعدل'].dropna().mean()
+                avg_std_ppt = data_df['المعدل'].dropna().std()
+                
+                at_risk_ppt = data_df[data_df['المعدل'] < 9]
+                borderline_ppt = data_df[(data_df['المعدل'] >= 9) & (data_df['المعدل'] < 10)]
+                excellent_ppt = data_df[data_df['المعدل'] >= avg_mean_ppt + 1.5 * avg_std_ppt]
+                
+                risk_text = f"""
+🔴 معرضون للخطر (معدل < 9): {len(at_risk_ppt)} تلاميذ
+يحتاجون تدخلاً عاجلاً
+
+🟡 على الحافة (معدل 9-10): {len(borderline_ppt)} تلاميذ
+قريبون من الرسوب
+
+⭐ متميزون: {len(excellent_ppt)} تلاميذ
+يمكن إشراكهم في مساعدة زملائهم
+                """
+                
+                risk_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.3), Inches(6), Inches(4))
+                risk_frame = risk_box.text_frame
+                risk_frame.word_wrap = True
+                for line in risk_text.strip().split('\n'):
+                    p = risk_frame.add_paragraph()
+                    p.text = line
+                    p.font.size = Pt(22)
+                    p.space_after = Pt(8)
+                
+                # At-risk students list
+                if len(at_risk_ppt) > 0:
+                    at_risk_names = at_risk_ppt.nsmallest(5, 'المعدل')[['اسم التلميذ', 'المعدل']]
+                    at_risk_list = "📋 أسماء التلاميذ الأكثر خطراً:\n"
+                    for idx, row in at_risk_names.iterrows():
+                        at_risk_list += f"• {row['اسم التلميذ']}: {row['المعدل']:.2f}\n"
+                    
+                    at_risk_box = slide.shapes.add_textbox(Inches(6.5), Inches(1.3), Inches(6), Inches(4))
+                    at_risk_frame = at_risk_box.text_frame
+                    at_risk_frame.word_wrap = True
+                    for line in at_risk_list.strip().split('\n'):
+                        p = at_risk_frame.add_paragraph()
+                        p.text = line
+                        p.font.size = Pt(20)
+                        p.space_after = Pt(6)
+                
+                # Subject Failure Analysis Slide
+                slide = add_content_slide(prs, "📊 تحليل نسب الرسوب في المواد")
+                
+                subject_failure_ppt = []
+                for col in subject_columns:
+                    if col != 'المعدل' and col in data_df.columns:
+                        subject_data_ppt = data_df[col].dropna()
+                        if len(subject_data_ppt) > 0:
+                            failing_pct = (subject_data_ppt < 10).mean() * 100
+                            subject_failure_ppt.append({
+                                'المادة': col,
+                                'نسبة الرسوب': failing_pct
+                            })
+                
+                if subject_failure_ppt:
+                    failure_df_ppt = pd.DataFrame(subject_failure_ppt)
+                    failure_df_ppt = failure_df_ppt.sort_values('نسبة الرسوب', ascending=False)
+                    
+                    fig_failure = px.bar(
+                        failure_df_ppt,
+                        x='المادة',
+                        y='نسبة الرسوب',
+                        color='نسبة الرسوب',
+                        color_continuous_scale='RdYlGn_r',
+                        text='نسبة الرسوب'
+                    )
+                    fig_failure.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+                    fig_failure.update_layout(height=450, width=1000)
+                    fig_failure.add_hline(y=50, line_dash="dash", line_color="red", annotation_text="خط الخطر")
+                    
+                    img_stream = fig_to_image(fig_failure)
+                    if img_stream:
+                        slide.shapes.add_picture(img_stream, Inches(1.5), Inches(1.3), width=Inches(10))
+                    
+                    # Critical subjects warning
+                    critical = failure_df_ppt[failure_df_ppt['نسبة الرسوب'] > 50]
+                    if len(critical) > 0:
+                        critical_text = f"⚠️ مواد حرجة (> 50% رسوب): {', '.join(critical['المادة'].tolist())}"
+                        critical_box = slide.shapes.add_textbox(Inches(0.5), Inches(6), Inches(12), Inches(1))
+                        critical_frame = critical_box.text_frame
+                        p = critical_frame.paragraphs[0]
+                        p.text = critical_text
+                        p.font.size = Pt(20)
+                        p.font.bold = True
+                
+                # Final Recommendations Slide
+                slide = add_content_slide(prs, "💡 التوصيات والخلاصة")
+                
+                recommendations_text = """
+📌 التوصيات الرئيسية:
+
+"""
+                
+                if len(at_risk_ppt) > 0:
+                    recommendations_text += f"🔴 تدخل عاجل: {len(at_risk_ppt)} تلاميذ يحتاجون دعماً مكثفاً\n\n"
+                
+                if len(borderline_ppt) > 0:
+                    recommendations_text += f"🟡 متابعة دقيقة: {len(borderline_ppt)} تلاميذ على حافة الرسوب\n\n"
+                
+                if worst_subject['المتوسط'] < 10:
+                    recommendations_text += f"📚 مراجعة طرق التدريس: {worst_subject['المادة']} تحتاج اهتماماً خاصاً\n\n"
+                
+                if len(excellent_ppt) > 0:
+                    recommendations_text += f"⭐ برنامج تميز: إشراك {len(excellent_ppt)} تلاميذ متميزين في المساعدة\n\n"
+                
+                recommendations_text += f"""
+📊 ملخص الأداء:
+• نسبة النجاح: {(avg_count + good_count)/total*100:.1f}%
+• نسبة التميز: {good_count/total*100:.1f}%
+• المعدل العام: {data_df['المعدل'].mean():.2f}
+                """
+                
+                rec_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.3), Inches(12), Inches(5.5))
+                rec_frame = rec_box.text_frame
+                rec_frame.word_wrap = True
+                for line in recommendations_text.strip().split('\n'):
+                    p = rec_frame.add_paragraph()
+                    p.text = line
+                    p.font.size = Pt(22)
+                    p.space_after = Pt(8)
                 
                 # Thank you slide
                 add_title_slide(prs, "شكراً لكم!", "تم الإنشاء من لوحة إحصائيات التلاميذ")
