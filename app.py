@@ -418,6 +418,16 @@ with col_ppt:
     
     if st.button("📊 إنشاء العرض التقديمي (PPTX)", disabled=len(selected_classes_ppt) == 0):
         with st.spinner("جاري إنشاء العرض التقديمي..."):
+            # Check Kaleido availability early and warn user
+            try:
+                import kaleido
+                test_fig = go.Figure()
+                test_fig.to_image(format="png", width=100, height=100)
+                kaleido_available = True
+            except Exception:
+                kaleido_available = False
+                st.warning("⚠️ تصدير الرسوم البيانية غير متاح على هذا الخادم. سيتم إنشاء العرض بدون الرسوم البيانية.")
+            
             # Create presentation
             prs = Presentation()
             prs.slide_width = Inches(13.333)
@@ -462,10 +472,28 @@ with col_ppt:
                 
                 return slide
             
+            # Check if Kaleido/Chrome is available for image export
+            def check_kaleido_available():
+                try:
+                    import kaleido
+                    # Try a simple test
+                    test_fig = go.Figure()
+                    test_fig.to_image(format="png", width=100, height=100)
+                    return True
+                except Exception:
+                    return False
+            
+            KALEIDO_AVAILABLE = check_kaleido_available()
+            
             # Helper to save plotly figure as image
             def fig_to_image(fig):
-                img_bytes = fig.to_image(format="png", width=900, height=500, scale=2)
-                return io.BytesIO(img_bytes)
+                if not KALEIDO_AVAILABLE:
+                    return None
+                try:
+                    img_bytes = fig.to_image(format="png", width=900, height=500, scale=2)
+                    return io.BytesIO(img_bytes)
+                except Exception:
+                    return None
             
             # Helper function to add table of contents slide
             def add_toc_slide(prs):
@@ -587,7 +615,8 @@ with col_ppt:
                 fig_pie.update_layout(showlegend=True, legend=dict(orientation="h", y=-0.1))
                 
                 img_stream = fig_to_image(fig_pie)
-                slide.shapes.add_picture(img_stream, Inches(6.5), Inches(1.5), width=Inches(6))
+                if img_stream:
+                    slide.shapes.add_picture(img_stream, Inches(6.5), Inches(1.5), width=Inches(6))
                 
                 # Average by Subject
                 slide = add_content_slide(prs, "📚 متوسط المعدلات حسب المادة")
@@ -618,7 +647,8 @@ with col_ppt:
                 fig_bar.update_layout(height=500, width=1100)
                 
                 img_stream = fig_to_image(fig_bar)
-                slide.shapes.add_picture(img_stream, Inches(1), Inches(1.3), width=Inches(11))
+                if img_stream:
+                    slide.shapes.add_picture(img_stream, Inches(1), Inches(1.3), width=Inches(11))
                 
                 # Grade Distribution Histogram
                 slide = add_content_slide(prs, "📊 توزيع المعدلات")
@@ -634,7 +664,8 @@ with col_ppt:
                 fig_hist.update_layout(height=500, width=1100)
                 
                 img_stream = fig_to_image(fig_hist)
-                slide.shapes.add_picture(img_stream, Inches(1), Inches(1.3), width=Inches(11))
+                if img_stream:
+                    slide.shapes.add_picture(img_stream, Inches(1), Inches(1.3), width=Inches(11))
                 
                 # Box Plot
                 slide = add_content_slide(prs, "📊 توزيع المعدلات حسب المادة (مخطط صندوقي)")
@@ -652,7 +683,8 @@ with col_ppt:
                     fig_box.update_layout(height=500, width=1100, showlegend=False)
                     
                     img_stream = fig_to_image(fig_box)
-                    slide.shapes.add_picture(img_stream, Inches(1), Inches(1.3), width=Inches(11))
+                    if img_stream:
+                        slide.shapes.add_picture(img_stream, Inches(1), Inches(1.3), width=Inches(11))
                 
                 # Top 10 Students
                 slide = add_content_slide(prs, "🏆 أفضل 10 تلاميذ")
