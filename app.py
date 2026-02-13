@@ -362,6 +362,157 @@ if subject_data:
 
 st.markdown("---")
 
+# Science vs Humanities Analysis
+st.header("🔬📚 مقارنة العلوم والآداب")
+
+st.markdown("""
+**تحليل توجه الفصل:** هل التلاميذ أفضل في المواد العلمية أم الأدبية؟
+""")
+
+# Define subject groups
+science_subjects = ['الرياضيات', 'علوم الحياة والأرض', 'الفيزياء والكيمياء']
+humanities_subjects = ['اللغة العربية', 'اللغة الفرنسية', 'اللغة الإنجليزية', 'الاجتماعيات']
+
+# Calculate averages for each group
+science_scores = []
+humanities_scores = []
+
+for col in science_subjects:
+    if col in df_filtered.columns:
+        valid_data = df_filtered[col].dropna()
+        science_scores.extend(valid_data.tolist())
+
+for col in humanities_subjects:
+    if col in df_filtered.columns:
+        valid_data = df_filtered[col].dropna()
+        humanities_scores.extend(valid_data.tolist())
+
+science_avg = np.mean(science_scores) if science_scores else 0
+humanities_avg = np.mean(humanities_scores) if humanities_scores else 0
+
+# Per-student comparison
+student_science_avg = []
+student_humanities_avg = []
+
+for idx, row in df_filtered.iterrows():
+    sci_vals = [row[col] for col in science_subjects if col in df_filtered.columns and pd.notna(row.get(col))]
+    hum_vals = [row[col] for col in humanities_subjects if col in df_filtered.columns and pd.notna(row.get(col))]
+    
+    if sci_vals:
+        student_science_avg.append(np.mean(sci_vals))
+    if hum_vals:
+        student_humanities_avg.append(np.mean(hum_vals))
+
+# Display comparison
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("### 🔬 المواد العلمية")
+    st.metric("المتوسط العام", f"{science_avg:.2f}")
+    st.caption(f"الرياضيات، علوم الحياة والأرض، الفيزياء والكيمياء")
+
+with col2:
+    st.markdown("### 📚 المواد الأدبية")
+    st.metric("المتوسط العام", f"{humanities_avg:.2f}")
+    st.caption(f"العربية، الفرنسية، الإنجليزية، الاجتماعيات")
+
+with col3:
+    st.markdown("### 📊 الفرق")
+    diff = science_avg - humanities_avg
+    if diff > 0:
+        st.metric("التوجه", f"علمي (+{diff:.2f})", delta=f"+{diff:.2f}")
+    elif diff < 0:
+        st.metric("التوجه", f"أدبي ({diff:.2f})", delta=f"{diff:.2f}")
+    else:
+        st.metric("التوجه", "متوازن", delta="0.00")
+
+# Visualization
+col1, col2 = st.columns(2)
+
+with col1:
+    # Bar chart comparison
+    comparison_df = pd.DataFrame({
+        'المجال': ['المواد العلمية 🔬', 'المواد الأدبية 📚'],
+        'المتوسط': [science_avg, humanities_avg]
+    })
+    
+    fig = px.bar(
+        comparison_df,
+        x='المجال',
+        y='المتوسط',
+        color='المجال',
+        color_discrete_map={
+            'المواد العلمية 🔬': '#636EFA',
+            'المواد الأدبية 📚': '#EF553B'
+        },
+        text='المتوسط'
+    )
+    fig.update_traces(texttemplate='%{text:.2f}', textposition='outside')
+    fig.update_layout(height=400, showlegend=False)
+    fig.add_hline(y=10, line_dash="dash", line_color="green", annotation_text="معدل النجاح (10)")
+    st.plotly_chart(fig, use_container_width=True)
+
+with col2:
+    # Detailed subject comparison
+    subject_comparison = []
+    for col in science_subjects:
+        if col in df_filtered.columns:
+            avg = df_filtered[col].dropna().mean()
+            subject_comparison.append({'المادة': col, 'المتوسط': avg, 'المجال': 'علمي'})
+    
+    for col in humanities_subjects:
+        if col in df_filtered.columns:
+            avg = df_filtered[col].dropna().mean()
+            subject_comparison.append({'المادة': col, 'المتوسط': avg, 'المجال': 'أدبي'})
+    
+    if subject_comparison:
+        subject_comp_df = pd.DataFrame(subject_comparison)
+        fig = px.bar(
+            subject_comp_df.sort_values('المتوسط', ascending=True),
+            x='المتوسط',
+            y='المادة',
+            color='المجال',
+            orientation='h',
+            color_discrete_map={'علمي': '#636EFA', 'أدبي': '#EF553B'}
+        )
+        fig.update_layout(height=400)
+        st.plotly_chart(fig, use_container_width=True)
+
+# Insights
+st.markdown("### 💡 تحليل التوجه")
+
+if abs(diff) < 0.5:
+    st.success("✅ **الفصل متوازن:** الأداء متقارب بين المواد العلمية والأدبية.")
+elif diff >= 2:
+    st.info("🔬 **توجه علمي قوي:** التلاميذ يتفوقون بشكل ملحوظ في المواد العلمية.")
+elif diff >= 0.5:
+    st.info("🔬 **توجه علمي طفيف:** أداء أفضل قليلاً في المواد العلمية.")
+elif diff <= -2:
+    st.info("📚 **توجه أدبي قوي:** التلاميذ يتفوقون بشكل ملحوظ في المواد الأدبية.")
+else:
+    st.info("📚 **توجه أدبي طفيف:** أداء أفضل قليلاً في المواد الأدبية.")
+
+# Student distribution by tilt
+if student_science_avg and student_humanities_avg and len(student_science_avg) == len(student_humanities_avg):
+    df_filtered_copy = df_filtered.copy()
+    df_filtered_copy['معدل_العلوم'] = student_science_avg[:len(df_filtered)]
+    df_filtered_copy['معدل_الآداب'] = student_humanities_avg[:len(df_filtered)]
+    df_filtered_copy['الفرق'] = df_filtered_copy['معدل_العلوم'] - df_filtered_copy['معدل_الآداب']
+    
+    science_tilt = len(df_filtered_copy[df_filtered_copy['الفرق'] > 0.5])
+    humanities_tilt = len(df_filtered_copy[df_filtered_copy['الفرق'] < -0.5])
+    balanced = len(df_filtered_copy[(df_filtered_copy['الفرق'] >= -0.5) & (df_filtered_copy['الفرق'] <= 0.5)])
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("🔬 تلاميذ علميون", science_tilt, help="تلاميذ أداؤهم أفضل في العلوم بفارق > 0.5")
+    with col2:
+        st.metric("⚖️ تلاميذ متوازنون", balanced, help="تلاميذ متقاربون في الأداء")
+    with col3:
+        st.metric("📚 تلاميذ أدبيون", humanities_tilt, help="تلاميذ أداؤهم أفضل في الآداب بفارق > 0.5")
+
+st.markdown("---")
+
 # Raw Data Table
 st.header("📋 جميع بيانات التلاميذ")
 st.dataframe(df_filtered[['ر.ت', 'رقم التلميذ', 'اسم التلميذ'] + subject_columns], 
