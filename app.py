@@ -153,12 +153,13 @@ def analyze_student(row, subject_cols):
     return strength, worst_subj
 
 # Get subject columns for analysis
-analysis_subject_cols = [col for col in subject_columns if col in df_filtered.columns]
+analysis_subject_cols = [col for col in subject_columns if col in df_filtered.columns and col != 'المعدل']
 
 # Create top performers table
 st.markdown("### 🥇 أفضل التلاميذ")
 
 top_students = df_filtered.nlargest(5, 'المعدل')[['ر.ت', 'اسم التلميذ', 'المعدل'] + analysis_subject_cols].copy()
+top_students = top_students.loc[:, ~top_students.columns.duplicated()]  # Remove duplicate columns
 top_students['الترتيب'] = range(1, len(top_students) + 1)
 top_students['نقاط القوة'] = top_students.apply(lambda row: analyze_student(row, analysis_subject_cols)[0], axis=1)
 
@@ -167,7 +168,9 @@ rank_labels = {1: '🥇 الأول', 2: '🥈 الثاني', 3: '🥉 الثال
 top_students['الترتيب'] = top_students['الترتيب'].map(rank_labels)
 
 top_display = top_students[['الترتيب', 'اسم التلميذ', 'المعدل', 'نقاط القوة']].copy()
-top_display['المعدل'] = top_display['المعدل'].apply(lambda x: f"{float(x):.2f}" if pd.notna(x) else "—")
+top_display.loc[:, 'المعدل_formatted'] = top_display['المعدل'].astype(float).round(2).astype(str)
+top_display = top_display[['الترتيب', 'اسم التلميذ', 'المعدل_formatted', 'نقاط القوة']]
+top_display.columns = ['الترتيب', 'اسم التلميذ', 'المعدل', 'نقاط القوة']
 
 st.dataframe(top_display, use_container_width=True, hide_index=True)
 
@@ -184,6 +187,7 @@ if len(top_students) > 0:
 st.markdown("### 📉 التلاميذ الذين يحتاجون دعماً")
 
 bottom_students = df_filtered.nsmallest(5, 'المعدل')[['ر.ت', 'اسم التلميذ', 'المعدل'] + analysis_subject_cols].copy()
+bottom_students = bottom_students.loc[:, ~bottom_students.columns.duplicated()]  # Remove duplicate columns
 bottom_students['الترتيب'] = range(len(df_filtered), len(df_filtered) - len(bottom_students), -1)
 
 # Analyze weaknesses
@@ -219,7 +223,9 @@ bottom_students['نقطة قوة'] = bottom_students.apply(
 )
 
 bottom_display = bottom_students[['الترتيب', 'اسم التلميذ', 'المعدل', 'نقطة قوة', 'التحليل']].copy()
-bottom_display['المعدل'] = bottom_display['المعدل'].apply(lambda x: f"{float(x):.2f}" if pd.notna(x) else "—")
+bottom_display.loc[:, 'المعدل_formatted'] = bottom_display['المعدل'].astype(float).round(2).astype(str)
+bottom_display = bottom_display[['الترتيب', 'اسم التلميذ', 'المعدل_formatted', 'نقطة قوة', 'التحليل']]
+bottom_display.columns = ['الترتيب', 'اسم التلميذ', 'المعدل', 'نقطة قوة', 'التحليل']
 
 st.dataframe(bottom_display, use_container_width=True, hide_index=True)
 
@@ -237,19 +243,25 @@ st.markdown("### ⚖️ التلاميذ على الحافة (9-11)")
 borderline = df_filtered[(df_filtered['المعدل'] >= 9) & (df_filtered['المعدل'] <= 11)].copy()
 if len(borderline) > 0:
     borderline = borderline.sort_values('المعدل')[['ر.ت', 'اسم التلميذ', 'المعدل'] + analysis_subject_cols]
+    borderline = borderline.loc[:, ~borderline.columns.duplicated()]  # Remove duplicate columns
     
     borderline['الحالة'] = borderline['المعدل'].apply(
-        lambda x: '🔴 قريب من الرسوب' if x < 10 else '🟢 ناجح بفارق بسيط'
+        lambda x: '🔴 قريب من الرسوب' if float(x) < 10 else '🟢 ناجح بفارق بسيط'
     )
     
-    borderline['المادة المؤثرة'] = borderline.apply(
-        lambda row: min([(col, row[col]) for col in analysis_subject_cols if pd.notna(row.get(col))], 
-                       key=lambda x: x[1], default=("—", 0)),
-        axis=1
-    ).apply(lambda x: f"{x[0]} ({x[1]:.2f})" if x[0] != "—" else "—")
+    def get_weakest_subject(row):
+        scores = [(col, row[col]) for col in analysis_subject_cols if col in row.index and pd.notna(row.get(col))]
+        if scores:
+            weakest = min(scores, key=lambda x: x[1])
+            return f"{weakest[0]} ({float(weakest[1]):.2f})"
+        return "—"
+    
+    borderline['المادة المؤثرة'] = borderline.apply(get_weakest_subject, axis=1)
     
     borderline_display = borderline[['اسم التلميذ', 'المعدل', 'الحالة', 'المادة المؤثرة']].head(10).copy()
-    borderline_display['المعدل'] = borderline_display['المعدل'].apply(lambda x: f"{float(x):.2f}" if pd.notna(x) else "—")
+    borderline_display.loc[:, 'المعدل_formatted'] = borderline_display['المعدل'].astype(float).round(2).astype(str)
+    borderline_display = borderline_display[['اسم التلميذ', 'المعدل_formatted', 'الحالة', 'المادة المؤثرة']]
+    borderline_display.columns = ['اسم التلميذ', 'المعدل', 'الحالة', 'المادة المؤثرة']
     
     st.dataframe(borderline_display, use_container_width=True, hide_index=True)
     
