@@ -513,6 +513,188 @@ if student_science_avg and student_humanities_avg and len(student_science_avg) =
 
 st.markdown("---")
 
+# Enrichment Subjects Analysis (مواد التفتح)
+st.header("🎨 مواد التفتح وعلاقتها بالتوجه")
+
+st.markdown("""
+**تحليل مواد التفتح:** هل التلاميذ العلميون أو الأدبيون أفضل في مواد التفتح؟
+""")
+
+# Define enrichment subjects
+enrichment_subjects = ['التربية الإسلامية', 'التربية البدنية', 'المعلوميات']
+
+# Calculate enrichment average
+enrichment_scores = []
+for col in enrichment_subjects:
+    if col in df_filtered.columns:
+        valid_data = df_filtered[col].dropna()
+        enrichment_scores.extend(valid_data.tolist())
+
+enrichment_avg = np.mean(enrichment_scores) if enrichment_scores else 0
+
+# Display enrichment subjects overview
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.markdown("### 🎨 مواد التفتح")
+    st.metric("المتوسط العام", f"{enrichment_avg:.2f}")
+    st.caption("التربية الإسلامية، التربية البدنية، المعلوميات")
+
+# Individual enrichment subjects
+enrichment_avgs = {}
+for i, col_name in enumerate(enrichment_subjects):
+    if col_name in df_filtered.columns:
+        avg = df_filtered[col_name].dropna().mean()
+        enrichment_avgs[col_name] = avg
+        with [col2, col3, col4][i]:
+            emoji = ['🕌', '🏃', '💻'][i]
+            st.metric(f"{emoji} {col_name}", f"{avg:.2f}")
+
+# Analyze enrichment performance by student orientation
+if student_science_avg and student_humanities_avg and len(student_science_avg) == len(student_humanities_avg):
+    st.markdown("### 📊 أداء مواد التفتح حسب توجه التلميذ")
+    
+    # Calculate enrichment average for each student
+    student_enrichment_avg = []
+    for idx, row in df_filtered.iterrows():
+        enr_vals = [row[col] for col in enrichment_subjects if col in df_filtered.columns and pd.notna(row.get(col))]
+        if enr_vals:
+            student_enrichment_avg.append(np.mean(enr_vals))
+        else:
+            student_enrichment_avg.append(np.nan)
+    
+    df_filtered_copy['معدل_التفتح'] = student_enrichment_avg[:len(df_filtered)]
+    
+    # Categorize students
+    science_students = df_filtered_copy[df_filtered_copy['الفرق'] > 0.5]
+    humanities_students = df_filtered_copy[df_filtered_copy['الفرق'] < -0.5]
+    balanced_students = df_filtered_copy[(df_filtered_copy['الفرق'] >= -0.5) & (df_filtered_copy['الفرق'] <= 0.5)]
+    
+    # Calculate enrichment averages by orientation
+    science_enrichment = science_students['معدل_التفتح'].dropna().mean() if len(science_students) > 0 else 0
+    humanities_enrichment = humanities_students['معدل_التفتح'].dropna().mean() if len(humanities_students) > 0 else 0
+    balanced_enrichment = balanced_students['معدل_التفتح'].dropna().mean() if len(balanced_students) > 0 else 0
+    
+    # Display comparison
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric(
+            "🔬 العلميون في التفتح", 
+            f"{science_enrichment:.2f}" if science_enrichment > 0 else "—",
+            help=f"معدل مواد التفتح للتلاميذ ذوي التوجه العلمي ({len(science_students)} تلميذ)"
+        )
+    
+    with col2:
+        st.metric(
+            "⚖️ المتوازنون في التفتح", 
+            f"{balanced_enrichment:.2f}" if balanced_enrichment > 0 else "—",
+            help=f"معدل مواد التفتح للتلاميذ المتوازنين ({len(balanced_students)} تلميذ)"
+        )
+    
+    with col3:
+        st.metric(
+            "📚 الأدبيون في التفتح", 
+            f"{humanities_enrichment:.2f}" if humanities_enrichment > 0 else "—",
+            help=f"معدل مواد التفتح للتلاميذ ذوي التوجه الأدبي ({len(humanities_students)} تلميذ)"
+        )
+    
+    # Visualization
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Bar chart for enrichment by orientation
+        orientation_enrichment_df = pd.DataFrame({
+            'التوجه': ['🔬 علميون', '⚖️ متوازنون', '📚 أدبيون'],
+            'معدل التفتح': [science_enrichment, balanced_enrichment, humanities_enrichment],
+            'عدد التلاميذ': [len(science_students), len(balanced_students), len(humanities_students)]
+        })
+        
+        fig = px.bar(
+            orientation_enrichment_df,
+            x='التوجه',
+            y='معدل التفتح',
+            color='التوجه',
+            color_discrete_map={
+                '🔬 علميون': '#636EFA',
+                '⚖️ متوازنون': '#00CC96',
+                '📚 أدبيون': '#EF553B'
+            },
+            text='معدل التفتح'
+        )
+        fig.update_traces(texttemplate='%{text:.2f}', textposition='outside')
+        fig.update_layout(height=400, showlegend=False, title="معدل مواد التفتح حسب التوجه")
+        fig.add_hline(y=10, line_dash="dash", line_color="green", annotation_text="معدل النجاح")
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Detailed enrichment subjects by orientation
+        detailed_data = []
+        for subj in enrichment_subjects:
+            if subj in df_filtered.columns:
+                sci_avg = science_students[subj].dropna().mean() if len(science_students) > 0 else 0
+                hum_avg = humanities_students[subj].dropna().mean() if len(humanities_students) > 0 else 0
+                bal_avg = balanced_students[subj].dropna().mean() if len(balanced_students) > 0 else 0
+                
+                detailed_data.append({'المادة': subj, 'المعدل': sci_avg, 'التوجه': 'علميون'})
+                detailed_data.append({'المادة': subj, 'المعدل': hum_avg, 'التوجه': 'أدبيون'})
+                detailed_data.append({'المادة': subj, 'المعدل': bal_avg, 'التوجه': 'متوازنون'})
+        
+        if detailed_data:
+            detailed_df = pd.DataFrame(detailed_data)
+            fig = px.bar(
+                detailed_df,
+                x='المادة',
+                y='المعدل',
+                color='التوجه',
+                barmode='group',
+                color_discrete_map={
+                    'علميون': '#636EFA',
+                    'متوازنون': '#00CC96',
+                    'أدبيون': '#EF553B'
+                }
+            )
+            fig.update_layout(height=400, title="تفصيل مواد التفتح حسب التوجه")
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # Insights
+    st.markdown("### 💡 استنتاجات مواد التفتح")
+    
+    # Determine who performs better
+    best_in_enrichment = max(
+        [('العلميون', science_enrichment), ('المتوازنون', balanced_enrichment), ('الأدبيون', humanities_enrichment)],
+        key=lambda x: x[1] if x[1] > 0 else -999
+    )
+    
+    worst_in_enrichment = min(
+        [('العلميون', science_enrichment), ('المتوازنون', balanced_enrichment), ('الأدبيون', humanities_enrichment)],
+        key=lambda x: x[1] if x[1] > 0 else 999
+    )
+    
+    if best_in_enrichment[1] > 0 and worst_in_enrichment[1] > 0:
+        diff_enrichment = best_in_enrichment[1] - worst_in_enrichment[1]
+        
+        if diff_enrichment < 0.3:
+            st.success("✅ **الأداء متقارب:** جميع التلاميذ بمختلف توجهاتهم لديهم أداء متشابه في مواد التفتح.")
+        else:
+            st.info(f"📊 **{best_in_enrichment[0]}** هم الأفضل في مواد التفتح بمعدل **{best_in_enrichment[1]:.2f}**، متفوقين على {worst_in_enrichment[0]} بفارق **{diff_enrichment:.2f}** نقطة.")
+        
+        # Individual subject insights
+        for subj in enrichment_subjects:
+            if subj in df_filtered.columns:
+                sci_avg = science_students[subj].dropna().mean() if len(science_students) > 0 else 0
+                hum_avg = humanities_students[subj].dropna().mean() if len(humanities_students) > 0 else 0
+                
+                if sci_avg > 0 and hum_avg > 0:
+                    subj_diff = sci_avg - hum_avg
+                    if abs(subj_diff) >= 0.5:
+                        if subj_diff > 0:
+                            st.caption(f"🔬 **{subj}:** العلميون أفضل بفارق {subj_diff:.2f}")
+                        else:
+                            st.caption(f"📚 **{subj}:** الأدبيون أفضل بفارق {abs(subj_diff):.2f}")
+
+st.markdown("---")
+
 # Raw Data Table
 st.header("📋 جميع بيانات التلاميذ")
 st.dataframe(df_filtered[['ر.ت', 'رقم التلميذ', 'اسم التلميذ'] + subject_columns], 
