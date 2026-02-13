@@ -695,6 +695,270 @@ if student_science_avg and student_humanities_avg and len(student_science_avg) =
 
 st.markdown("---")
 
+# Language Proficiency Gap Analysis
+st.header("🌐 تحليل فجوة الكفاءة اللغوية")
+
+st.markdown("""
+**مقارنة الأداء اللغوي:** هل يواجه التلاميذ صعوبة في اللغات الأجنبية مقارنة بلغتهم الأم؟
+""")
+
+# Define language subjects
+primary_language = 'اللغة العربية'
+foreign_languages = ['اللغة الفرنسية', 'اللغة الإنجليزية']
+
+# Calculate averages
+arabic_avg = df_filtered[primary_language].dropna().mean() if primary_language in df_filtered.columns else 0
+french_avg = df_filtered['اللغة الفرنسية'].dropna().mean() if 'اللغة الفرنسية' in df_filtered.columns else 0
+english_avg = df_filtered['اللغة الإنجليزية'].dropna().mean() if 'اللغة الإنجليزية' in df_filtered.columns else 0
+foreign_avg = np.mean([french_avg, english_avg]) if french_avg > 0 or english_avg > 0 else 0
+
+# Language proficiency gap
+proficiency_gap = arabic_avg - foreign_avg
+
+# Display metrics
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.markdown("### 🇲🇦 اللغة العربية")
+    st.metric("المتوسط", f"{arabic_avg:.2f}")
+    st.caption("اللغة الأم")
+
+with col2:
+    st.markdown("### 🇫🇷 اللغة الفرنسية")
+    st.metric("المتوسط", f"{french_avg:.2f}")
+    gap_fr = arabic_avg - french_avg
+    if gap_fr > 0:
+        st.caption(f"فجوة: -{gap_fr:.2f}")
+    else:
+        st.caption(f"فرق: +{abs(gap_fr):.2f}")
+
+with col3:
+    st.markdown("### 🇬🇧 اللغة الإنجليزية")
+    st.metric("المتوسط", f"{english_avg:.2f}")
+    gap_en = arabic_avg - english_avg
+    if gap_en > 0:
+        st.caption(f"فجوة: -{gap_en:.2f}")
+    else:
+        st.caption(f"فرق: +{abs(gap_en):.2f}")
+
+with col4:
+    st.markdown("### 📊 فجوة الكفاءة")
+    if proficiency_gap > 0:
+        st.metric("الفجوة", f"{proficiency_gap:.2f}", delta=f"-{proficiency_gap:.2f}", delta_color="inverse")
+    else:
+        st.metric("الفجوة", f"{abs(proficiency_gap):.2f}", delta=f"+{abs(proficiency_gap):.2f}")
+    st.caption("الفرق بين العربية واللغات الأجنبية")
+
+# Visualization
+col1, col2 = st.columns(2)
+
+with col1:
+    # Bar chart for language comparison
+    lang_df = pd.DataFrame({
+        'اللغة': ['🇲🇦 العربية', '🇫🇷 الفرنسية', '🇬🇧 الإنجليزية'],
+        'المتوسط': [arabic_avg, french_avg, english_avg],
+        'النوع': ['اللغة الأم', 'لغة أجنبية', 'لغة أجنبية']
+    })
+    
+    fig = px.bar(
+        lang_df,
+        x='اللغة',
+        y='المتوسط',
+        color='النوع',
+        color_discrete_map={
+            'اللغة الأم': '#00CC96',
+            'لغة أجنبية': '#EF553B'
+        },
+        text='المتوسط'
+    )
+    fig.update_traces(texttemplate='%{text:.2f}', textposition='outside')
+    fig.update_layout(height=400, showlegend=True, title="مقارنة الأداء اللغوي")
+    fig.add_hline(y=10, line_dash="dash", line_color="gray", annotation_text="معدل النجاح")
+    st.plotly_chart(fig, use_container_width=True)
+
+with col2:
+    # Radar chart for language skills
+    categories = ['العربية', 'الفرنسية', 'الإنجليزية']
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatterpolar(
+        r=[arabic_avg, french_avg, english_avg],
+        theta=categories,
+        fill='toself',
+        name='المتوسط الفعلي',
+        line_color='#636EFA'
+    ))
+    
+    # Add reference line for passing grade
+    fig.add_trace(go.Scatterpolar(
+        r=[10, 10, 10],
+        theta=categories,
+        fill='toself',
+        name='معدل النجاح',
+        line_color='#00CC96',
+        opacity=0.3
+    ))
+    
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 20]
+            )
+        ),
+        showlegend=True,
+        title="مخطط الكفاءة اللغوية",
+        height=400
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+# Per-student language gap analysis
+st.markdown("### 📈 توزيع الفجوة اللغوية لدى التلاميذ")
+
+student_arabic = []
+student_foreign = []
+student_gap = []
+
+for idx, row in df_filtered.iterrows():
+    ar = row.get(primary_language) if primary_language in df_filtered.columns else np.nan
+    fr = row.get('اللغة الفرنسية') if 'اللغة الفرنسية' in df_filtered.columns else np.nan
+    en = row.get('اللغة الإنجليزية') if 'اللغة الإنجليزية' in df_filtered.columns else np.nan
+    
+    if pd.notna(ar):
+        student_arabic.append(ar)
+        foreign_vals = [v for v in [fr, en] if pd.notna(v)]
+        if foreign_vals:
+            foreign_mean = np.mean(foreign_vals)
+            student_foreign.append(foreign_mean)
+            student_gap.append(ar - foreign_mean)
+        else:
+            student_foreign.append(np.nan)
+            student_gap.append(np.nan)
+    else:
+        student_arabic.append(np.nan)
+        student_foreign.append(np.nan)
+        student_gap.append(np.nan)
+
+# Categorize students by gap
+positive_gap = sum(1 for g in student_gap if pd.notna(g) and g > 1)  # Better in Arabic
+small_gap = sum(1 for g in student_gap if pd.notna(g) and -1 <= g <= 1)  # Balanced
+negative_gap = sum(1 for g in student_gap if pd.notna(g) and g < -1)  # Better in foreign languages
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        "🇲🇦 أفضل في العربية", 
+        positive_gap,
+        help="تلاميذ أداؤهم في العربية أفضل من اللغات الأجنبية بفارق > 1"
+    )
+
+with col2:
+    st.metric(
+        "⚖️ متوازنون لغوياً", 
+        small_gap,
+        help="تلاميذ أداؤهم متقارب في جميع اللغات"
+    )
+
+with col3:
+    st.metric(
+        "🌍 أفضل في الأجنبية", 
+        negative_gap,
+        help="تلاميذ أداؤهم في اللغات الأجنبية أفضل من العربية بفارق > 1"
+    )
+
+# Histogram of language gap
+if student_gap:
+    valid_gaps = [g for g in student_gap if pd.notna(g)]
+    if valid_gaps:
+        gap_df = pd.DataFrame({'الفجوة اللغوية': valid_gaps})
+        fig = px.histogram(
+            gap_df,
+            x='الفجوة اللغوية',
+            nbins=20,
+            color_discrete_sequence=['#636EFA']
+        )
+        fig.add_vline(x=0, line_dash="dash", line_color="red", annotation_text="توازن")
+        fig.update_layout(
+            title="توزيع الفجوة اللغوية (العربية - اللغات الأجنبية)",
+            xaxis_title="الفجوة (قيم موجبة = أفضل في العربية)",
+            yaxis_title="عدد التلاميذ",
+            height=350
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+# French vs English comparison
+st.markdown("### 🇫🇷 vs 🇬🇧 مقارنة اللغتين الأجنبيتين")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    fr_en_diff = french_avg - english_avg
+    if abs(fr_en_diff) < 0.5:
+        st.info("⚖️ **أداء متقارب:** التلاميذ لديهم مستوى متشابه في الفرنسية والإنجليزية.")
+    elif fr_en_diff > 0:
+        st.info(f"🇫🇷 **الفرنسية أفضل:** التلاميذ يتفوقون في الفرنسية بفارق **{fr_en_diff:.2f}** نقطة.")
+    else:
+        st.info(f"🇬🇧 **الإنجليزية أفضل:** التلاميذ يتفوقون في الإنجليزية بفارق **{abs(fr_en_diff):.2f}** نقطة.")
+
+with col2:
+    # Success rates for each language
+    if primary_language in df_filtered.columns:
+        ar_pass = (df_filtered[primary_language].dropna() >= 10).mean() * 100
+    else:
+        ar_pass = 0
+    
+    if 'اللغة الفرنسية' in df_filtered.columns:
+        fr_pass = (df_filtered['اللغة الفرنسية'].dropna() >= 10).mean() * 100
+    else:
+        fr_pass = 0
+    
+    if 'اللغة الإنجليزية' in df_filtered.columns:
+        en_pass = (df_filtered['اللغة الإنجليزية'].dropna() >= 10).mean() * 100
+    else:
+        en_pass = 0
+    
+    pass_df = pd.DataFrame({
+        'اللغة': ['العربية', 'الفرنسية', 'الإنجليزية'],
+        'نسبة النجاح %': [ar_pass, fr_pass, en_pass]
+    })
+    
+    fig = px.bar(
+        pass_df,
+        x='اللغة',
+        y='نسبة النجاح %',
+        color='نسبة النجاح %',
+        color_continuous_scale='RdYlGn',
+        text='نسبة النجاح %'
+    )
+    fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+    fig.update_layout(height=300, title="نسبة النجاح في كل لغة")
+    st.plotly_chart(fig, use_container_width=True)
+
+# Insights
+st.markdown("### 💡 استنتاجات الكفاءة اللغوية")
+
+if proficiency_gap > 2:
+    st.warning(f"⚠️ **فجوة كبيرة:** التلاميذ يواجهون صعوبة واضحة في اللغات الأجنبية مقارنة بالعربية (فجوة: {proficiency_gap:.2f}). يُنصح بتعزيز برامج تعلم اللغات الأجنبية.")
+elif proficiency_gap > 1:
+    st.info(f"📊 **فجوة متوسطة:** هناك فرق ملحوظ بين الأداء في العربية واللغات الأجنبية (فجوة: {proficiency_gap:.2f}).")
+elif proficiency_gap > 0:
+    st.success(f"✅ **فجوة صغيرة:** الأداء متقارب نسبياً بين اللغات (فجوة: {proficiency_gap:.2f}).")
+else:
+    st.success(f"🌟 **تميز في اللغات الأجنبية:** التلاميذ يؤدون بشكل أفضل في اللغات الأجنبية من العربية!")
+
+# Specific recommendations
+if french_avg < 10 or english_avg < 10:
+    struggling_langs = []
+    if french_avg < 10:
+        struggling_langs.append(f"الفرنسية ({french_avg:.2f})")
+    if english_avg < 10:
+        struggling_langs.append(f"الإنجليزية ({english_avg:.2f})")
+    st.caption(f"⚠️ المواد التي تحتاج اهتماماً: {', '.join(struggling_langs)}")
+
+st.markdown("---")
+
 # Raw Data Table
 st.header("📋 جميع بيانات التلاميذ")
 st.dataframe(df_filtered[['ر.ت', 'رقم التلميذ', 'اسم التلميذ'] + subject_columns], 
