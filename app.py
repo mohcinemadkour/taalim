@@ -1199,6 +1199,273 @@ else:
 
 st.markdown("---")
 
+# Individual Gap Analysis - At-Risk Report
+st.header("🚨 تحليل الفجوات الفردية - تقرير التلاميذ المعرضين للخطر")
+
+st.markdown("""
+**تحديد التلاميذ الذين يحتاجون تدخلاً:** تحليل شامل للتلاميذ على حافة النجاح، والمتميزين، والذين يعانون من ضعف في مواد معينة.
+""")
+
+if 'المعدل' in df_filtered.columns:
+    # Calculate statistics for classification
+    avg_mean = df_filtered['المعدل'].dropna().mean()
+    avg_std = df_filtered['المعدل'].dropna().std()
+    
+    # Classify students
+    df_analysis = df_filtered[['ر.ت', 'رقم التلميذ', 'اسم التلميذ', 'المعدل'] + [col for col in subject_columns if col != 'المعدل' and col in df_filtered.columns]].copy()
+    df_analysis = df_analysis.dropna(subset=['المعدل'])
+    
+    # Categories
+    borderline_low = df_analysis[(df_analysis['المعدل'] >= 9) & (df_analysis['المعدل'] < 10)]
+    borderline_high = df_analysis[(df_analysis['المعدل'] >= 10) & (df_analysis['المعدل'] < 11)]
+    at_risk = df_analysis[df_analysis['المعدل'] < 9]
+    excellent = df_analysis[df_analysis['المعدل'] >= avg_mean + 1.5 * avg_std]
+    outliers_top = df_analysis[df_analysis['المعدل'] >= avg_mean + 2 * avg_std]
+    
+    # Summary metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "🔴 معرضون للخطر",
+            len(at_risk),
+            help="تلاميذ معدلهم أقل من 9 - يحتاجون تدخلاً عاجلاً"
+        )
+    
+    with col2:
+        st.metric(
+            "🟡 على الحافة",
+            len(borderline_low),
+            help="تلاميذ معدلهم بين 9 و 10 - قريبون من الرسوب"
+        )
+    
+    with col3:
+        st.metric(
+            "🟢 ناجحون بصعوبة",
+            len(borderline_high),
+            help="تلاميذ معدلهم بين 10 و 11 - نجحوا لكن يحتاجون دعماً"
+        )
+    
+    with col4:
+        st.metric(
+            "⭐ متميزون",
+            len(excellent),
+            help=f"تلاميذ معدلهم أعلى من {avg_mean + 1.5 * avg_std:.2f}"
+        )
+    
+    # Tab layout for different categories
+    tab1, tab2, tab3, tab4 = st.tabs(["🔴 المعرضون للخطر", "🟡 على الحافة", "⭐ المتميزون", "📊 تحليل الضعف"])
+    
+    with tab1:
+        st.markdown("### 🔴 التلاميذ المعرضون للخطر (معدل < 9)")
+        if len(at_risk) > 0:
+            st.warning(f"⚠️ يوجد **{len(at_risk)}** تلاميذ بحاجة إلى تدخل عاجل!")
+            
+            for idx, row in at_risk.iterrows():
+                with st.expander(f"📋 {row['اسم التلميذ']} - المعدل: {row['المعدل']:.2f}"):
+                    # Find weakest subjects
+                    subject_scores = {}
+                    for col in subject_columns:
+                        if col != 'المعدل' and col in df_filtered.columns and pd.notna(row.get(col)):
+                            subject_scores[col] = row[col]
+                    
+                    if subject_scores:
+                        sorted_subjects = sorted(subject_scores.items(), key=lambda x: x[1])
+                        
+                        st.markdown("**🔻 أضعف المواد (تحتاج تدخلاً):**")
+                        for subj, score in sorted_subjects[:3]:
+                            color = "red" if score < 10 else "green"
+                            gap = 10 - score
+                            st.markdown(f"- **{subj}**: :red[{score:.2f}] (يحتاج +{gap:.2f} للنجاح)")
+                        
+                        # Calculate what's needed
+                        current_avg = row['المعدل']
+                        points_needed = (10 - current_avg) * len(subject_scores)
+                        st.info(f"💡 يحتاج إلى رفع مجموع نقاطه بـ **{points_needed:.1f}** نقطة للوصول للمعدل 10")
+        else:
+            st.success("✅ لا يوجد تلاميذ معرضون للخطر!")
+    
+    with tab2:
+        st.markdown("### 🟡 التلاميذ على الحافة (معدل 9-10)")
+        if len(borderline_low) > 0:
+            st.info(f"📊 يوجد **{len(borderline_low)}** تلاميذ قريبون جداً من خط النجاح")
+            
+            for idx, row in borderline_low.iterrows():
+                with st.expander(f"📋 {row['اسم التلميذ']} - المعدل: {row['المعدل']:.2f}"):
+                    subject_scores = {}
+                    for col in subject_columns:
+                        if col != 'المعدل' and col in df_filtered.columns and pd.notna(row.get(col)):
+                            subject_scores[col] = row[col]
+                    
+                    if subject_scores:
+                        sorted_subjects = sorted(subject_scores.items(), key=lambda x: x[1])
+                        failing_subjects = [(s, sc) for s, sc in sorted_subjects if sc < 10]
+                        
+                        if failing_subjects:
+                            st.markdown("**🎯 المواد التي تسحب المعدل للأسفل:**")
+                            for subj, score in failing_subjects[:3]:
+                                gap = 10 - score
+                                st.markdown(f"- **{subj}**: :red[{score:.2f}] (فجوة: {gap:.2f})")
+                            
+                            # Quick win suggestion
+                            easiest_fix = failing_subjects[0]
+                            st.success(f"💡 **أسهل تحسين:** رفع درجة **{easiest_fix[0]}** من {easiest_fix[1]:.2f} إلى 10 سيرفع المعدل بشكل ملحوظ")
+                        else:
+                            st.success("جميع المواد فوق 10 - المعدل منخفض بسبب بعض الدرجات القريبة من 10")
+        else:
+            st.success("✅ لا يوجد تلاميذ على حافة الرسوب!")
+        
+        # Also show borderline successful students
+        st.markdown("### 🟢 ناجحون لكن يحتاجون دعماً (معدل 10-11)")
+        if len(borderline_high) > 0:
+            st.info(f"📊 يوجد **{len(borderline_high)}** تلاميذ نجحوا بفارق بسيط")
+            
+            borderline_high_sorted = borderline_high.sort_values('المعدل')
+            for idx, row in borderline_high_sorted.head(5).iterrows():
+                subject_scores = {col: row[col] for col in subject_columns 
+                                if col != 'المعدل' and col in df_filtered.columns and pd.notna(row.get(col))}
+                if subject_scores:
+                    weakest = min(subject_scores.items(), key=lambda x: x[1])
+                    st.caption(f"• {row['اسم التلميذ']} ({row['المعدل']:.2f}) - أضعف مادة: {weakest[0]} ({weakest[1]:.2f})")
+    
+    with tab3:
+        st.markdown("### ⭐ التلاميذ المتميزون - نموذج التفوق")
+        
+        if len(excellent) > 0:
+            st.success(f"🌟 يوجد **{len(excellent)}** تلاميذ متميزين يمكن اعتبارهم نموذجاً!")
+            
+            # Top performers
+            top_students = excellent.nlargest(5, 'المعدل')
+            
+            for idx, row in top_students.iterrows():
+                with st.expander(f"🏆 {row['اسم التلميذ']} - المعدل: {row['المعدل']:.2f}", expanded=True):
+                    subject_scores = {}
+                    for col in subject_columns:
+                        if col != 'المعدل' and col in df_filtered.columns and pd.notna(row.get(col)):
+                            subject_scores[col] = row[col]
+                    
+                    if subject_scores:
+                        sorted_subjects = sorted(subject_scores.items(), key=lambda x: x[1], reverse=True)
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.markdown("**💪 أقوى المواد:**")
+                            for subj, score in sorted_subjects[:3]:
+                                st.markdown(f"- **{subj}**: :green[{score:.2f}]")
+                        
+                        with col2:
+                            st.markdown("**📈 مجال للتحسين:**")
+                            for subj, score in sorted_subjects[-2:]:
+                                st.markdown(f"- **{subj}**: {score:.2f}")
+            
+            # Outlier analysis
+            if len(outliers_top) > 0:
+                st.markdown("### 🚀 التلاميذ الاستثنائيون (Outliers)")
+                st.info(f"هؤلاء التلاميذ ({len(outliers_top)}) يتفوقون بشكل استثنائي على زملائهم")
+                
+                for idx, row in outliers_top.iterrows():
+                    gap_from_avg = row['المعدل'] - avg_mean
+                    st.caption(f"🌟 **{row['اسم التلميذ']}**: {row['المعدل']:.2f} (+{gap_from_avg:.2f} عن المتوسط)")
+        else:
+            st.info("لا يوجد تلاميذ متميزون بشكل استثنائي في هذه المجموعة")
+    
+    with tab4:
+        st.markdown("### 📊 تحليل نقاط الضعف حسب المادة")
+        
+        # Find subjects where most students struggle
+        subject_failure_analysis = []
+        for col in subject_columns:
+            if col != 'المعدل' and col in df_filtered.columns:
+                subject_data = df_filtered[col].dropna()
+                if len(subject_data) > 0:
+                    failing_count = (subject_data < 10).sum()
+                    failing_pct = (subject_data < 10).mean() * 100
+                    avg_score = subject_data.mean()
+                    subject_failure_analysis.append({
+                        'المادة': col,
+                        'عدد الراسبين': failing_count,
+                        'نسبة الرسوب %': failing_pct,
+                        'المتوسط': avg_score
+                    })
+        
+        if subject_failure_analysis:
+            failure_df = pd.DataFrame(subject_failure_analysis)
+            failure_df = failure_df.sort_values('نسبة الرسوب %', ascending=False)
+            
+            # Visualization
+            fig = px.bar(
+                failure_df,
+                x='المادة',
+                y='نسبة الرسوب %',
+                color='نسبة الرسوب %',
+                color_continuous_scale='RdYlGn_r',
+                text='عدد الراسبين'
+            )
+            fig.update_traces(texttemplate='%{text} تلميذ', textposition='outside')
+            fig.update_layout(height=400, title="نسبة الرسوب في كل مادة")
+            fig.add_hline(y=50, line_dash="dash", line_color="red", annotation_text="خط الخطر (50%)")
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Critical subjects
+            critical_subjects = failure_df[failure_df['نسبة الرسوب %'] > 50]
+            if len(critical_subjects) > 0:
+                st.error(f"⚠️ **مواد حرجة** (أكثر من 50% رسوب): {', '.join(critical_subjects['المادة'].tolist())}")
+            
+            # Students who fail in multiple subjects
+            st.markdown("### 📉 التلاميذ الذين يرسبون في عدة مواد")
+            
+            multi_fail_students = []
+            for idx, row in df_analysis.iterrows():
+                failing_subjects = []
+                for col in subject_columns:
+                    if col != 'المعدل' and col in df_filtered.columns and pd.notna(row.get(col)):
+                        if row[col] < 10:
+                            failing_subjects.append(col)
+                
+                if len(failing_subjects) >= 3:
+                    multi_fail_students.append({
+                        'التلميذ': row['اسم التلميذ'],
+                        'المعدل': row['المعدل'],
+                        'عدد المواد الراسب فيها': len(failing_subjects),
+                        'المواد': ', '.join(failing_subjects[:5])
+                    })
+            
+            if multi_fail_students:
+                multi_fail_df = pd.DataFrame(multi_fail_students)
+                multi_fail_df = multi_fail_df.sort_values('عدد المواد الراسب فيها', ascending=False)
+                
+                st.dataframe(multi_fail_df, use_container_width=True, hide_index=True)
+                
+                worst_case = multi_fail_df.iloc[0]
+                st.warning(f"⚠️ الحالة الأكثر خطورة: **{worst_case['التلميذ']}** يرسب في **{worst_case['عدد المواد الراسب فيها']}** مواد")
+            else:
+                st.success("✅ لا يوجد تلاميذ يرسبون في 3 مواد أو أكثر")
+
+    # Recommendations
+    st.markdown("### 💡 توصيات للتدخل")
+    
+    recommendations = []
+    
+    if len(at_risk) > 0:
+        recommendations.append(f"🔴 **تدخل عاجل:** {len(at_risk)} تلاميذ يحتاجون دعماً مكثفاً فورياً")
+    
+    if len(borderline_low) > 0:
+        recommendations.append(f"🟡 **متابعة دقيقة:** {len(borderline_low)} تلاميذ على حافة الرسوب يحتاجون دعماً مستهدفاً")
+    
+    if len(critical_subjects) > 0 if 'critical_subjects' in dir() else False:
+        recommendations.append(f"📚 **مراجعة طرق التدريس:** المواد الحرجة تحتاج اهتماماً خاصاً")
+    
+    if len(excellent) > 0:
+        recommendations.append(f"⭐ **برنامج تميز:** {len(excellent)} تلاميذ متميزين يمكن إشراكهم في مساعدة زملائهم")
+    
+    for rec in recommendations:
+        st.markdown(f"- {rec}")
+
+else:
+    st.warning("⚠️ لا يوجد عمود 'المعدل' في البيانات")
+
+st.markdown("---")
+
 # Raw Data Table
 st.header("📋 جميع بيانات التلاميذ")
 st.dataframe(df_filtered[['ر.ت', 'رقم التلميذ', 'اسم التلميذ'] + subject_columns], 
