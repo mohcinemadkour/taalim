@@ -15,6 +15,100 @@ import os
 # Set page config
 st.set_page_config(page_title="إحصائيات التلاميذ", layout="wide")
 
+# Apply RTL (Right-to-Left) styling for Arabic
+st.markdown("""
+<style>
+    /* Main container RTL */
+    .main .block-container {
+        direction: rtl;
+        text-align: right;
+    }
+    
+    /* Sidebar RTL */
+    [data-testid="stSidebar"] {
+        direction: rtl;
+        text-align: right;
+    }
+    
+    /* Headers and text */
+    h1, h2, h3, h4, h5, h6, p, span, div, label {
+        direction: rtl;
+        text-align: right;
+    }
+    
+    /* Metrics */
+    [data-testid="stMetric"] {
+        direction: rtl;
+        text-align: center;
+    }
+    
+    /* DataFrames */
+    .stDataFrame {
+        direction: rtl;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        direction: rtl;
+        justify-content: flex-end;
+    }
+    
+    /* Selectbox and inputs */
+    .stSelectbox, .stMultiSelect, .stTextInput {
+        direction: rtl;
+    }
+    
+    /* Expander */
+    .streamlit-expanderHeader {
+        direction: rtl;
+        text-align: right;
+    }
+    
+    /* Info boxes */
+    .stAlert {
+        direction: rtl;
+        text-align: right;
+    }
+    
+    /* Download buttons */
+    .stDownloadButton {
+        direction: rtl;
+    }
+    
+    /* Checkbox */
+    .stCheckbox {
+        direction: rtl;
+    }
+    
+    /* Make columns flow RTL */
+    [data-testid="column"] {
+        direction: rtl;
+    }
+    
+    /* File uploader */
+    [data-testid="stFileUploader"] {
+        direction: rtl;
+    }
+    
+    /* Caption text */
+    .stCaption {
+        direction: rtl;
+        text-align: right;
+    }
+    
+    /* Markdown content */
+    .stMarkdown {
+        direction: rtl;
+        text-align: right;
+    }
+    
+    /* Tables inside dataframes - align text right */
+    .dataframe th, .dataframe td {
+        text-align: right !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # File uploader in sidebar
 st.sidebar.header("📁 تحميل الملف")
 uploaded_file = st.sidebar.file_uploader(
