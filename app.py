@@ -113,6 +113,155 @@ with col4:
 
 st.markdown("---")
 
+# Data Overview Table - Top & Bottom Performers
+st.header("🏆 أفضل وأضعف التلاميذ")
+
+st.markdown("""
+**نظرة سريعة:** جدول يعرض التلاميذ المتفوقين والمتأخرين مع نقاط قوتهم وضعفهم الرئيسية.
+""")
+
+# Function to analyze student strengths and weaknesses
+def analyze_student(row, subject_cols):
+    scores = {}
+    for col in subject_cols:
+        if col != 'المعدل' and col in row.index and pd.notna(row.get(col)):
+            scores[col] = row[col]
+    
+    if not scores:
+        return "—", "—"
+    
+    sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    
+    # Best subject
+    best_subj, best_score = sorted_scores[0]
+    
+    # Worst subject
+    worst_subj, worst_score = sorted_scores[-1]
+    
+    # Generate strength description
+    if best_score >= 18:
+        strength = f"متميز في {best_subj} ({best_score:.2f})"
+    elif best_score >= 15:
+        strength = f"قوي في {best_subj} ({best_score:.2f})"
+    else:
+        strength = f"أفضل مادة: {best_subj} ({best_score:.2f})"
+    
+    # Check if struggling
+    if worst_score < 10:
+        strength += f" | يعاني في {worst_subj} ({worst_score:.2f})"
+    
+    return strength, worst_subj
+
+# Get subject columns for analysis
+analysis_subject_cols = [col for col in subject_columns if col in df_filtered.columns]
+
+# Create top performers table
+st.markdown("### 🥇 أفضل التلاميذ")
+
+top_students = df_filtered.nlargest(5, 'المعدل')[['ر.ت', 'اسم التلميذ', 'المعدل'] + analysis_subject_cols].copy()
+top_students['الترتيب'] = range(1, len(top_students) + 1)
+top_students['نقاط القوة'] = top_students.apply(lambda row: analyze_student(row, analysis_subject_cols)[0], axis=1)
+
+# Format rank
+rank_labels = {1: '🥇 الأول', 2: '🥈 الثاني', 3: '🥉 الثالث', 4: '4️⃣ الرابع', 5: '5️⃣ الخامس'}
+top_students['الترتيب'] = top_students['الترتيب'].map(rank_labels)
+
+top_display = top_students[['الترتيب', 'اسم التلميذ', 'المعدل', 'نقاط القوة']].copy()
+top_display['المعدل'] = top_display['المعدل'].apply(lambda x: f"{x:.2f}")
+
+st.dataframe(top_display, use_container_width=True, hide_index=True)
+
+# Highlight top performer
+if len(top_students) > 0:
+    top_performer = df_filtered.loc[df_filtered['المعدل'].idxmax()]
+    top_subjects = {col: top_performer[col] for col in analysis_subject_cols if pd.notna(top_performer.get(col))}
+    if top_subjects:
+        perfect_subjects = [s for s, score in top_subjects.items() if score >= 18]
+        if perfect_subjects:
+            st.success(f"🌟 **{top_performer['اسم التلميذ']}** متميز(ة) بشكل استثنائي في: {', '.join(perfect_subjects)}")
+
+# Create bottom performers table
+st.markdown("### 📉 التلاميذ الذين يحتاجون دعماً")
+
+bottom_students = df_filtered.nsmallest(5, 'المعدل')[['ر.ت', 'اسم التلميذ', 'المعدل'] + analysis_subject_cols].copy()
+bottom_students['الترتيب'] = range(len(df_filtered), len(df_filtered) - len(bottom_students), -1)
+
+# Analyze weaknesses
+def get_weakness_details(row, subject_cols):
+    scores = {}
+    for col in subject_cols:
+        if col != 'المعدل' and col in row.index and pd.notna(row.get(col)):
+            scores[col] = row[col]
+    
+    if not scores:
+        return "—"
+    
+    sorted_scores = sorted(scores.items(), key=lambda x: x[1])
+    failing_subjects = [(s, sc) for s, sc in sorted_scores if sc < 10]
+    
+    if failing_subjects:
+        weakest = failing_subjects[0]
+        if len(failing_subjects) > 1:
+            return f"ضعيف في {weakest[0]} ({weakest[1]:.2f}) + {len(failing_subjects)-1} مواد أخرى"
+        else:
+            return f"يحتاج دعماً في {weakest[0]} ({weakest[1]:.2f})"
+    else:
+        best = sorted_scores[-1]
+        return f"أقوى مادة: {best[0]} ({best[1]:.2f})"
+
+bottom_students['التحليل'] = bottom_students.apply(lambda row: get_weakness_details(row, analysis_subject_cols), axis=1)
+
+# Find strength even for weak students
+bottom_students['نقطة قوة'] = bottom_students.apply(
+    lambda row: max([(col, row[col]) for col in analysis_subject_cols if pd.notna(row.get(col))], 
+                   key=lambda x: x[1], default=("—", 0))[0] if any(pd.notna(row.get(col)) for col in analysis_subject_cols) else "—",
+    axis=1
+)
+
+bottom_display = bottom_students[['الترتيب', 'اسم التلميذ', 'المعدل', 'نقطة قوة', 'التحليل']].copy()
+bottom_display['المعدل'] = bottom_display['المعدل'].apply(lambda x: f"{x:.2f}")
+
+st.dataframe(bottom_display, use_container_width=True, hide_index=True)
+
+# Quick action recommendation
+if len(bottom_students) > 0:
+    worst_performer = df_filtered.loc[df_filtered['المعدل'].idxmin()]
+    worst_subjects = {col: worst_performer[col] for col in analysis_subject_cols if pd.notna(worst_performer.get(col)) and worst_performer[col] < 10}
+    if worst_subjects:
+        critical_subject = min(worst_subjects.items(), key=lambda x: x[1])
+        st.warning(f"⚠️ **إجراء مقترح:** التلميذ(ة) **{worst_performer['اسم التلميذ']}** يحتاج دعماً عاجلاً في **{critical_subject[0]}** ({critical_subject[1]:.2f})")
+
+# Borderline students (close to passing/failing)
+st.markdown("### ⚖️ التلاميذ على الحافة (9-11)")
+
+borderline = df_filtered[(df_filtered['المعدل'] >= 9) & (df_filtered['المعدل'] <= 11)].copy()
+if len(borderline) > 0:
+    borderline = borderline.sort_values('المعدل')[['ر.ت', 'اسم التلميذ', 'المعدل'] + analysis_subject_cols]
+    
+    borderline['الحالة'] = borderline['المعدل'].apply(
+        lambda x: '🔴 قريب من الرسوب' if x < 10 else '🟢 ناجح بفارق بسيط'
+    )
+    
+    borderline['المادة المؤثرة'] = borderline.apply(
+        lambda row: min([(col, row[col]) for col in analysis_subject_cols if pd.notna(row.get(col))], 
+                       key=lambda x: x[1], default=("—", 0)),
+        axis=1
+    ).apply(lambda x: f"{x[0]} ({x[1]:.2f})" if x[0] != "—" else "—")
+    
+    borderline_display = borderline[['اسم التلميذ', 'المعدل', 'الحالة', 'المادة المؤثرة']].head(10).copy()
+    borderline_display['المعدل'] = borderline_display['المعدل'].apply(lambda x: f"{x:.2f}")
+    
+    st.dataframe(borderline_display, use_container_width=True, hide_index=True)
+    
+    # Quick insight
+    below_10 = len(borderline[borderline['المعدل'] < 10])
+    above_10 = len(borderline[borderline['المعدل'] >= 10])
+    st.info(f"📊 من بين {len(borderline)} تلميذ على الحافة: **{below_10}** قريبون من الرسوب، **{above_10}** ناجحون بفارق بسيط")
+else:
+    st.success("✅ لا يوجد تلاميذ على حافة النجاح/الرسوب")
+
+st.markdown("---")
+
 # Grade Brackets Analysis
 st.header("📊 تحليل شرائح المعدلات")
 
