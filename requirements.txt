@@ -6,3 +6,4 @@ python-pptx
 openpyxl
 xlrd
 kaleido
+statsmodels
