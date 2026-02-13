@@ -1,9 +1,7 @@
 services:
   - type: web
     name: taalim
-    runtime: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0"
+    runtime: docker
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.11.7"
+      - key: STREAMLIT_SERVER_PORT
+        value: "10000"
