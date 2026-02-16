@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -108,6 +108,88 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# ============ GENDER DETECTION FUNCTION ============
+def detect_gender(name):
+    """
+    Detect gender from Arabic/Moroccan first names.
+    Returns: 'M' for male, 'F' for female, 'U' for unknown
+    """
+    if pd.isna(name) or not isinstance(name, str):
+        return 'U'
+    
+    # Extract first name (first word)
+    first_name = name.strip().split()[0] if name.strip() else ''
+    first_name = first_name.strip()
+    
+    # Common Moroccan/Arabic female names
+    female_names = {
+        # Names ending with typical female suffixes
+        'فاطمة', 'عائشة', 'خديجة', 'مريم', 'زينب', 'أمينة', 'حليمة', 'رقية', 'سعاد', 'نادية',
+        'سميرة', 'نجاة', 'لطيفة', 'حسناء', 'سناء', 'هناء', 'دعاء', 'آسية', 'سارة', 'ليلى',
+        'نعيمة', 'كريمة', 'رحيمة', 'فتيحة', 'صفية', 'سلمى', 'هدى', 'منى', 'سهام', 'إيمان',
+        'سكينة', 'حنان', 'غيثة', 'رجاء', 'وفاء', 'صباح', 'نوال', 'سعيدة', 'جميلة', 'نبيلة',
+        'عزيزة', 'حفيظة', 'رشيدة', 'مليكة', 'خولة', 'أسماء', 'بشرى', 'إكرام', 'ابتسام', 'انتصار',
+        'سمية', 'علية', 'زهرة', 'ياسمين', 'نسرين', 'شيماء', 'إسراء', 'آية', 'مروة', 'هاجر',
+        'سلوى', 'لبنى', 'رانيا', 'دنيا', 'نهى', 'نورة', 'نور', 'سهى', 'ندى', 'هبة', 'لينا',
+        'ريم', 'رنا', 'دينا', 'منار', 'ملاك', 'جنة', 'روان', 'تسنيم', 'سجى', 'وئام', 'نجوى',
+        'توفيقة', 'مباركة', 'عتيقة', 'يامنة', 'فضيلة', 'زهور', 'بديعة', 'نزهة', 'حورية', 'سعدية',
+        'فوزية', 'زكية', 'تركية', 'خيرة', 'عيشة', 'للا', 'أم', 'فاطنة', 'رحمة', 'بركة',
+        'إلهام', 'سهيلة', 'نسيمة', 'وسيلة', 'جليلة', 'وردة', 'زوليخة', 'حادة', 'فضمة', 'يطو',
+        'إيناس', 'أميمة', 'هند', 'علا', 'رباب', 'شروق', 'غادة', 'لمياء', 'مها', 'ميساء'
+    }
+    
+    # Common Moroccan/Arabic male names
+    male_names = {
+        'محمد', 'أحمد', 'عبدالله', 'عبد', 'علي', 'حسن', 'حسين', 'عمر', 'خالد', 'يوسف',
+        'إبراهيم', 'عثمان', 'سعيد', 'كريم', 'رشيد', 'مصطفى', 'إدريس', 'عزيز', 'حميد', 'مراد',
+        'جمال', 'كمال', 'نبيل', 'سمير', 'منير', 'بشير', 'نصير', 'زهير', 'طارق', 'فاروق',
+        'صلاح', 'جلال', 'بلال', 'عادل', 'فيصل', 'نوفل', 'جواد', 'فؤاد', 'عماد', 'زياد',
+        'أيمن', 'أنس', 'إياد', 'رياض', 'عياض', 'معاذ', 'براء', 'همام', 'هشام', 'وسام',
+        'ياسر', 'ناصر', 'منصور', 'عاشور', 'نور الدين', 'صلاح الدين', 'عز الدين', 'بدر الدين',
+        'عبدالرحمن', 'عبدالكريم', 'عبدالحق', 'عبدالصمد', 'عبدالعزيز', 'عبدالرحيم', 'عبدالغني',
+        'الحسن', 'الحسين', 'المهدي', 'المصطفى', 'الطيب', 'المختار', 'المنصور', 'الشريف',
+        'أمين', 'رضوان', 'سفيان', 'عدنان', 'سليمان', 'رمضان', 'شعبان', 'مروان', 'عثمان',
+        'حمزة', 'طه', 'يحيى', 'زكريا', 'آدم', 'نوح', 'موسى', 'عيسى', 'داوود', 'سليم',
+        'وليد', 'ماجد', 'راشد', 'حامد', 'أسامة', 'قاسم', 'باسم', 'هاشم', 'عصام', 'حسام',
+        'فهد', 'سعد', 'فارس', 'أيوب', 'يونس', 'إلياس', 'درويش', 'مبارك', 'ميمون', 'لحسن',
+        'بوشعيب', 'العربي', 'الطاهر', 'الصديق', 'عبدو', 'حدو', 'بوزيد', 'مولاي', 'سيدي'
+    }
+    
+    # Check exact match first
+    if first_name in female_names:
+        return 'F'
+    if first_name in male_names:
+        return 'M'
+    
+    # Check if name starts with common male prefixes
+    male_prefixes = ['عبد', 'أبو', 'بو', 'سي', 'مولاي', 'سيدي']
+    for prefix in male_prefixes:
+        if first_name.startswith(prefix):
+            return 'M'
+    
+    # Check endings - common female name endings in Arabic
+    female_endings = ['ة', 'اء', 'ى', 'ية']
+    for ending in female_endings:
+        if first_name.endswith(ending) and len(first_name) > 2:
+            return 'F'
+    
+    # Default to unknown
+    return 'U'
+
+def get_gender_stats(df, name_column='اسم التلميذ'):
+    """Calculate gender statistics from a dataframe."""
+    if name_column not in df.columns:
+        return {'M': 0, 'F': 0, 'U': len(df)}
+    
+    df['_gender'] = df[name_column].apply(detect_gender)
+    stats = df['_gender'].value_counts().to_dict()
+    
+    return {
+        'M': stats.get('M', 0),
+        'F': stats.get('F', 0),
+        'U': stats.get('U', 0)
+    }
 
 # File uploader in sidebar
 st.sidebar.header("📁 تحميل الملف")
@@ -2006,29 +2088,30 @@ with col_ppt:
                     ("1", "📈 الإحصائيات العامة", PRIMARY_COLOR),
                     ("2", "🏆 أفضل وأضعف التلاميذ", SECONDARY_COLOR),
                     ("3", "📊 توزيع شرائح المعدلات", PRIMARY_COLOR),
-                    ("4", "📚 متوسط المعدلات حسب المادة", SECONDARY_COLOR),
-                    ("5", "🔬 مقارنة العلوم والآداب", PRIMARY_COLOR),
-                    ("6", "� مواد التفتح", SECONDARY_COLOR),
-                    ("7", "🌐 الكفاءة اللغوية", PRIMARY_COLOR),
-                    ("8", "🔗 تحليل الارتباط", SECONDARY_COLOR),
-                    ("9", "🚨 التلاميذ المعرضين للخطر", PRIMARY_COLOR),
-                    ("10", "💡 التوصيات", SECONDARY_COLOR)
+                    ("4", "📈 توزيع المعدلات", SECONDARY_COLOR),
+                    ("5", "📚 متوسط المعدلات حسب المادة", PRIMARY_COLOR),
+                    ("6", "🔬 مقارنة العلوم والآداب", SECONDARY_COLOR),
+                    ("7", "🎨 مواد التفتح", PRIMARY_COLOR),
+                    ("8", "🌐 الكفاءة اللغوية", SECONDARY_COLOR),
+                    ("9", "🔗 تحليل الارتباط", PRIMARY_COLOR),
+                    ("10", "🚨 التلاميذ المعرضين للخطر", SECONDARY_COLOR),
+                    ("11", "💡 التوصيات", PRIMARY_COLOR)
                 ]
                 
                 # Create two-column RTL layout for TOC items (right column first)
                 y_start = 1.5
                 x_right = 7.0   # Right column (first in RTL)
                 x_left = 0.8    # Left column (second in RTL)
-                item_height = 0.5
+                item_height = 0.45
                 
                 for i, (num, text, color) in enumerate(toc_items):
-                    # RTL: first 5 items on RIGHT, next 5 on LEFT
-                    if i < 5:
+                    # RTL: first 6 items on RIGHT, next 5 on LEFT
+                    if i < 6:
                         x_pos = x_right
                         y_pos = y_start + (i * item_height)
                     else:
                         x_pos = x_left
-                        y_pos = y_start + ((i - 5) * item_height)
+                        y_pos = y_start + ((i - 6) * item_height)
                     
                     # Item text FIRST (on the right side) for RTL
                     item_box = slide.shapes.add_textbox(Inches(x_pos), Inches(y_pos + 0.05), 
@@ -2087,29 +2170,100 @@ with col_ppt:
                 # Table of Contents
                 add_toc_slide(prs)
                 
-                # Overall Statistics
+                # Overall Statistics - Dashboard Style
                 slide = add_content_slide(prs, "📈 الإحصائيات العامة")
                 
-                stats_text = f"""
-عدد التلاميذ: {len(data_df)}
-المعدل العام: {data_df['المعدل'].mean():.2f}
-أعلى معدل: {data_df['المعدل'].max():.2f}
-أدنى معدل: {data_df['المعدل'].min():.2f}
-الانحراف المعياري: {data_df['المعدل'].std():.2f}
-عدد الفصول: {len(class_names)}
-                """
+                # Calculate statistics
+                total_students = len(data_df)
+                avg_grade = data_df['المعدل'].mean()
+                max_grade = data_df['المعدل'].max()
+                min_grade = data_df['المعدل'].min()
+                std_grade = data_df['المعدل'].std()
+                num_classes = len(class_names)
+                pass_rate = (data_df['المعدل'] >= 10).mean() * 100
+                excellent_rate = (data_df['المعدل'] >= 14).mean() * 100
                 
-                # RTL: Position stats on the right side
-                stats_box = slide.shapes.add_textbox(Inches(7.5), Inches(1.5), Inches(5.5), Inches(4))
-                stats_frame = stats_box.text_frame
-                stats_frame.word_wrap = True
-                for line in stats_text.strip().split('\n'):
-                    p = stats_frame.add_paragraph()
-                    p.text = line.strip()
-                    p.font.size = Pt(24)
-                    p.space_after = Pt(12)
-                    p.alignment = PP_ALIGN.RIGHT
-                    set_paragraph_rtl(p)
+                # Dashboard card function
+                def add_stat_card(slide, x, y, width, height, title, value, icon, bg_color, text_color=RGBColor(255,255,255)):
+                    # Card background
+                    card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(width), Inches(height))
+                    card.fill.solid()
+                    card.fill.fore_color.rgb = bg_color
+                    card.line.fill.background()
+                    card.shadow.inherit = False
+                    
+                    # Icon
+                    icon_box = slide.shapes.add_textbox(Inches(x + 0.1), Inches(y + 0.15), Inches(width - 0.2), Inches(0.5))
+                    icon_frame = icon_box.text_frame
+                    icon_para = icon_frame.paragraphs[0]
+                    icon_para.text = icon
+                    icon_para.font.size = Pt(28)
+                    icon_para.alignment = PP_ALIGN.CENTER
+                    
+                    # Value
+                    value_box = slide.shapes.add_textbox(Inches(x + 0.1), Inches(y + 0.6), Inches(width - 0.2), Inches(0.6))
+                    value_frame = value_box.text_frame
+                    value_para = value_frame.paragraphs[0]
+                    value_para.text = str(value)
+                    value_para.font.size = Pt(32)
+                    value_para.font.bold = True
+                    value_para.font.color.rgb = text_color
+                    value_para.alignment = PP_ALIGN.CENTER
+                    
+                    # Title
+                    title_box = slide.shapes.add_textbox(Inches(x + 0.1), Inches(y + 1.15), Inches(width - 0.2), Inches(0.4))
+                    title_frame = title_box.text_frame
+                    title_para = title_frame.paragraphs[0]
+                    title_para.text = title
+                    title_para.font.size = Pt(14)
+                    title_para.font.color.rgb = RGBColor(240, 240, 240)
+                    title_para.alignment = PP_ALIGN.CENTER
+                    set_paragraph_rtl(title_para)
+                
+                # Row 1: Main metrics (4 cards)
+                add_stat_card(slide, 9.8, 1.3, 2.8, 1.6, "عدد التلاميذ", f"{total_students}", "👥", RGBColor(52, 73, 94))
+                add_stat_card(slide, 6.8, 1.3, 2.8, 1.6, "المعدل العام", f"{avg_grade:.2f}", "📊", RGBColor(41, 128, 185))
+                add_stat_card(slide, 3.8, 1.3, 2.8, 1.6, "نسبة النجاح", f"{pass_rate:.1f}%", "✅", RGBColor(39, 174, 96))
+                add_stat_card(slide, 0.8, 1.3, 2.8, 1.6, "عدد الفصول", f"{num_classes}", "🏫", RGBColor(142, 68, 173))
+                
+                # Row 2: Secondary metrics (4 cards)
+                add_stat_card(slide, 9.8, 3.1, 2.8, 1.6, "أعلى معدل", f"{max_grade:.2f}", "🏆", RGBColor(230, 126, 34))
+                add_stat_card(slide, 6.8, 3.1, 2.8, 1.6, "أدنى معدل", f"{min_grade:.2f}", "📉", RGBColor(231, 76, 60))
+                add_stat_card(slide, 3.8, 3.1, 2.8, 1.6, "الانحراف المعياري", f"{std_grade:.2f}", "📈", RGBColor(52, 152, 219))
+                add_stat_card(slide, 0.8, 3.1, 2.8, 1.6, "نسبة التميز (≥14)", f"{excellent_rate:.1f}%", "⭐", RGBColor(241, 196, 15))
+                
+                # Bottom summary text with explanation
+                summary_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.9), Inches(12.3), Inches(1.8))
+                summary_frame = summary_box.text_frame
+                summary_frame.word_wrap = True
+                
+                # Performance assessment
+                if pass_rate >= 80:
+                    assessment = "🌟 أداء ممتاز - نسبة نجاح عالية"
+                    assessment_color = RGBColor(39, 174, 96)
+                elif pass_rate >= 60:
+                    assessment = "✅ أداء جيد - مع إمكانية التحسين"
+                    assessment_color = RGBColor(241, 196, 15)
+                else:
+                    assessment = "⚠️ يحتاج اهتماماً - نسبة النجاح منخفضة"
+                    assessment_color = RGBColor(231, 76, 60)
+                
+                p = summary_frame.paragraphs[0]
+                p.text = assessment
+                p.font.size = Pt(22)
+                p.font.bold = True
+                p.font.color.rgb = assessment_color
+                p.alignment = PP_ALIGN.CENTER
+                set_paragraph_rtl(p)
+                
+                # Add explanation line
+                p2 = summary_frame.add_paragraph()
+                p2.text = "📌 نسبة النجاح: معدل ≥ 10 | نسبة التميز: معدل ≥ 14 (جيد جداً/ممتاز)"
+                p2.font.size = Pt(14)
+                p2.font.color.rgb = RGBColor(100, 100, 100)
+                p2.alignment = PP_ALIGN.CENTER
+                p2.space_before = Pt(8)
+                set_paragraph_rtl(p2)
                 
                 # Grade Brackets
                 slide = add_content_slide(prs, "📊 توزيع شرائح المعدلات")
@@ -2119,47 +2273,313 @@ with col_ppt:
                 good_count = len(data_df[data_df['المعدل'] >= 12])
                 total = len(data_df)
                 
-                brackets_text = f"""
-🔴 دون المعدل (0 - 9.99): {below_avg_count} تلميذ ({below_avg_count/total*100:.1f}%)
-
-🟡 متوسط (10 - 11.99): {avg_count} تلميذ ({avg_count/total*100:.1f}%)
-
-🟢 جيد/ممتاز (12 - 20): {good_count} تلميذ ({good_count/total*100:.1f}%)
-
-✅ نسبة النجاح (≥10): {(avg_count + good_count)/total*100:.1f}%
-                """
+                # Fancy styled text boxes for each bracket
+                def add_bracket_card(slide, x, y, width, height, emoji, title, count, pct, bg_color, border_color):
+                    card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(width), Inches(height))
+                    card.fill.solid()
+                    card.fill.fore_color.rgb = bg_color
+                    card.line.color.rgb = border_color
+                    card.line.width = Pt(2)
+                    
+                    content_box = slide.shapes.add_textbox(Inches(x + 0.1), Inches(y + 0.1), Inches(width - 0.2), Inches(height - 0.2))
+                    tf = content_box.text_frame
+                    tf.word_wrap = True
+                    
+                    p1 = tf.paragraphs[0]
+                    p1.text = f"{emoji} {title}"
+                    p1.font.size = Pt(14)
+                    p1.font.bold = True
+                    p1.font.color.rgb = border_color
+                    p1.alignment = PP_ALIGN.CENTER
+                    
+                    p2 = tf.add_paragraph()
+                    p2.text = f"{count} تلميذ"
+                    p2.font.size = Pt(24)
+                    p2.font.bold = True
+                    p2.font.color.rgb = RGBColor(50, 50, 50)
+                    p2.alignment = PP_ALIGN.CENTER
+                    
+                    p3 = tf.add_paragraph()
+                    p3.text = f"{pct:.1f}%"
+                    p3.font.size = Pt(18)
+                    p3.font.color.rgb = border_color
+                    p3.alignment = PP_ALIGN.CENTER
                 
-                # RTL: Position brackets text on the right
-                bracket_box = slide.shapes.add_textbox(Inches(6.5), Inches(1.5), Inches(6.3), Inches(5))
-                bracket_frame = bracket_box.text_frame
-                bracket_frame.word_wrap = True
-                for line in brackets_text.strip().split('\n'):
-                    p = bracket_frame.add_paragraph()
-                    p.text = line.strip()
-                    p.font.size = Pt(22)
-                    p.space_after = Pt(8)
-                    p.alignment = PP_ALIGN.RIGHT
-                    set_paragraph_rtl(p)
+                add_bracket_card(slide, 9.5, 1.3, 3.2, 1.4, "🔴", "دون المعدل (0-9.99)", below_avg_count, below_avg_count/total*100, 
+                                RGBColor(255, 235, 235), RGBColor(231, 76, 60))
+                add_bracket_card(slide, 9.5, 2.85, 3.2, 1.4, "🟡", "متوسط (10-11.99)", avg_count, avg_count/total*100,
+                                RGBColor(255, 250, 230), RGBColor(241, 196, 15))
+                add_bracket_card(slide, 9.5, 4.4, 3.2, 1.4, "🟢", "جيد/ممتاز (12-20)", good_count, good_count/total*100,
+                                RGBColor(230, 255, 240), RGBColor(39, 174, 96))
                 
-                # Pie chart
-                bracket_counts_ppt = pd.DataFrame({
-                    'Bracket': ['دون المعدل (0-9.99)', 'متوسط (10-11.99)', 'جيد/ممتاز (12-20)'],
-                    'Count': [below_avg_count, avg_count, good_count]
-                })
-                fig_pie = px.pie(bracket_counts_ppt, values='Count', names='Bracket',
-                                color='Bracket',
-                                color_discrete_map={
-                                    'دون المعدل (0-9.99)': '#EF553B',
-                                    'متوسط (10-11.99)': '#FECB52',
-                                    'جيد/ممتاز (12-20)': '#00CC96'
-                                })
-                fig_pie.update_traces(textposition='inside', textinfo='percent+value')
-                fig_pie.update_layout(showlegend=True, legend=dict(orientation="h", y=-0.1))
+                success_box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(9.5), Inches(5.95), Inches(3.2), Inches(0.55))
+                success_box.fill.solid()
+                success_box.fill.fore_color.rgb = RGBColor(41, 128, 185)
+                success_box.line.fill.background()
+                
+                success_text = slide.shapes.add_textbox(Inches(9.5), Inches(6.0), Inches(3.2), Inches(0.45))
+                stf = success_text.text_frame
+                sp = stf.paragraphs[0]
+                sp.text = f"✅ نسبة النجاح: {(avg_count + good_count)/total*100:.1f}%"
+                sp.font.size = Pt(15)
+                sp.font.bold = True
+                sp.font.color.rgb = RGBColor(255, 255, 255)
+                sp.alignment = PP_ALIGN.CENTER
+                
+                # 3D-style Donut Pie chart - BIGGER SIZE
+                fig_pie = go.Figure(data=[go.Pie(
+                    labels=['دون المعدل<br>(0-9.99)', 'متوسط<br>(10-11.99)', 'جيد/ممتاز<br>(12-20)'],
+                    values=[below_avg_count, avg_count, good_count],
+                    hole=0.35,
+                    marker=dict(
+                        colors=['#EF553B', '#FECB52', '#00CC96'],
+                        line=dict(color='white', width=3)
+                    ),
+                    textinfo='percent+value',
+                    textfont=dict(size=18, color='white'),
+                    textposition='inside',
+                    pull=[0.05, 0.02, 0.02],
+                    rotation=45,
+                    direction='clockwise'
+                )])
+                
+                fig_pie.update_layout(
+                    showlegend=True,
+                    legend=dict(orientation="h", yanchor="bottom", y=-0.12, xanchor="center", x=0.5, font=dict(size=14)),
+                    height=580,
+                    width=650,
+                    margin=dict(t=10, b=50, l=10, r=10),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    annotations=[dict(text=f'<b>{total}</b><br>تلميذ', x=0.5, y=0.5, font=dict(size=22, color='#333'), showarrow=False)]
+                )
                 
                 img_stream = fig_to_image(fig_pie)
                 if img_stream:
-                    # RTL: Chart on the left
-                    slide.shapes.add_picture(img_stream, Inches(0.5), Inches(1.5), width=Inches(6))
+                    slide.shapes.add_picture(img_stream, Inches(0.2), Inches(1.0), width=Inches(6.8))
+                
+                # Grade Distribution Histogram - Slide 4
+                slide = add_content_slide(prs, "📈 توزيع المعدلات")
+                
+                # Calculate distribution insights
+                grades = data_df['المعدل'].dropna()
+                grade_mean = grades.mean()
+                grade_median = grades.median()
+                grade_std = grades.std()
+                grade_skew = grades.skew() if len(grades) > 2 else 0
+                q1 = grades.quantile(0.25)
+                q3 = grades.quantile(0.75)
+                iqr = q3 - q1
+                passing_rate = (grades >= 10).sum() / len(grades) * 100
+                
+                # Distribution shape analysis
+                if grade_skew > 0.5:
+                    skew_text = "التوزيع مائل لليمين (معظم الدرجات منخفضة)"
+                    skew_emoji = "⚠️"
+                    skew_color = RGBColor(231, 76, 60)
+                elif grade_skew < -0.5:
+                    skew_text = "التوزيع مائل لليسار (معظم الدرجات مرتفعة)"
+                    skew_emoji = "✅"
+                    skew_color = RGBColor(39, 174, 96)
+                else:
+                    skew_text = "التوزيع متماثل تقريباً (طبيعي)"
+                    skew_emoji = "📊"
+                    skew_color = RGBColor(52, 152, 219)
+                
+                # Create enhanced histogram - larger and centered better
+                fig_hist = go.Figure()
+                
+                # Add histogram with gradient effect
+                fig_hist.add_trace(go.Histogram(
+                    x=grades,
+                    nbinsx=20,
+                    marker=dict(
+                        color='rgba(99, 110, 250, 0.7)',
+                        line=dict(color='rgba(99, 110, 250, 1)', width=1)
+                    ),
+                    name='توزيع المعدلات'
+                ))
+                
+                # Add mean line
+                fig_hist.add_vline(x=grade_mean, line_dash="dash", line_color="red", line_width=2,
+                                  annotation_text=f"المتوسط: {grade_mean:.2f}", annotation_position="top right")
+                
+                # Add median line
+                fig_hist.add_vline(x=grade_median, line_dash="dot", line_color="green", line_width=2,
+                                  annotation_text=f"الوسيط: {grade_median:.2f}", annotation_position="top left")
+                
+                # Add passing grade line
+                fig_hist.add_vline(x=10, line_dash="solid", line_color="orange", line_width=2,
+                                  annotation_text="حد النجاح (10)", annotation_position="bottom right")
+                
+                fig_hist.update_layout(
+                    height=380, width=580,
+                    xaxis_title="المعدل",
+                    yaxis_title="عدد التلاميذ",
+                    showlegend=False,
+                    margin=dict(t=20, b=40, l=40, r=20)
+                )
+                
+                img_stream = fig_to_image(fig_hist)
+                if img_stream:
+                    slide.shapes.add_picture(img_stream, Inches(0.2), Inches(1.1), width=Inches(5.8))
+                
+                # ===== RIGHT PANEL - Stats & Insights =====
+                
+                # Panel title with icon
+                insights_title = slide.shapes.add_textbox(Inches(6.2), Inches(1.1), Inches(6.3), Inches(0.5))
+                itf = insights_title.text_frame
+                ip = itf.paragraphs[0]
+                ip.text = "📊 رؤى إحصائية"
+                ip.font.size = Pt(22)
+                ip.font.bold = True
+                ip.font.color.rgb = PRIMARY_COLOR
+                ip.alignment = PP_ALIGN.RIGHT
+                set_paragraph_rtl(ip)
+                
+                # Fancy stat cards function
+                def add_fancy_stat(slide, x, y, icon, label, value, bg_color, text_color, width=2.95):
+                    # Card background with gradient effect
+                    box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(width), Inches(0.65))
+                    box.fill.solid()
+                    box.fill.fore_color.rgb = bg_color
+                    box.line.color.rgb = text_color
+                    box.line.width = Pt(2)
+                    
+                    # Icon + Label on top
+                    txt = slide.shapes.add_textbox(Inches(x + 0.05), Inches(y + 0.05), Inches(width - 0.1), Inches(0.3))
+                    tf = txt.text_frame
+                    p = tf.paragraphs[0]
+                    p.text = f"{icon} {label}"
+                    p.font.size = Pt(11)
+                    p.font.color.rgb = RGBColor(100, 100, 100)
+                    p.alignment = PP_ALIGN.CENTER
+                    
+                    # Value below
+                    val_txt = slide.shapes.add_textbox(Inches(x + 0.05), Inches(y + 0.32), Inches(width - 0.1), Inches(0.3))
+                    vtf = val_txt.text_frame
+                    vp = vtf.paragraphs[0]
+                    vp.text = value
+                    vp.font.size = Pt(18)
+                    vp.font.bold = True
+                    vp.font.color.rgb = text_color
+                    vp.alignment = PP_ALIGN.CENTER
+                
+                # Row 1: Mean & Median
+                add_fancy_stat(slide, 6.2, 1.6, "📍", "المتوسط", f"{grade_mean:.2f}", 
+                              RGBColor(254, 226, 226), RGBColor(220, 38, 38))
+                add_fancy_stat(slide, 9.3, 1.6, "📌", "الوسيط", f"{grade_median:.2f}", 
+                              RGBColor(220, 252, 231), RGBColor(22, 163, 74))
+                
+                # Row 2: Std Dev & IQR
+                add_fancy_stat(slide, 6.2, 2.35, "📏", "الانحراف المعياري", f"{grade_std:.2f}", 
+                              RGBColor(219, 234, 254), RGBColor(37, 99, 235))
+                add_fancy_stat(slide, 9.3, 2.35, "📐", "المدى الربيعي", f"{iqr:.2f}", 
+                              RGBColor(243, 232, 255), RGBColor(147, 51, 234))
+                
+                # Row 3: Passing Rate (full width)
+                pass_box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.2), Inches(3.1), Inches(6.1), Inches(0.7))
+                pass_box.fill.solid()
+                if passing_rate >= 80:
+                    pass_box.fill.fore_color.rgb = RGBColor(220, 252, 231)
+                    pass_color = RGBColor(22, 163, 74)
+                    pass_icon = "🏆"
+                elif passing_rate >= 60:
+                    pass_box.fill.fore_color.rgb = RGBColor(254, 249, 195)
+                    pass_color = RGBColor(202, 138, 4)
+                    pass_icon = "✅"
+                else:
+                    pass_box.fill.fore_color.rgb = RGBColor(254, 226, 226)
+                    pass_color = RGBColor(220, 38, 38)
+                    pass_icon = "⚠️"
+                pass_box.line.color.rgb = pass_color
+                pass_box.line.width = Pt(2)
+                
+                pass_txt = slide.shapes.add_textbox(Inches(6.3), Inches(3.2), Inches(5.9), Inches(0.5))
+                ptf = pass_txt.text_frame
+                pp = ptf.paragraphs[0]
+                pp.text = f"{pass_icon} نسبة النجاح: {passing_rate:.1f}%"
+                pp.font.size = Pt(20)
+                pp.font.bold = True
+                pp.font.color.rgb = pass_color
+                pp.alignment = PP_ALIGN.CENTER
+                
+                # ===== BOTTOM SECTION - Quartile Gauges =====
+                
+                # Quartile title
+                q_title = slide.shapes.add_textbox(Inches(6.2), Inches(3.9), Inches(6.1), Inches(0.4))
+                qtf = q_title.text_frame
+                qp = qtf.paragraphs[0]
+                qp.text = "📈 توزيع الأرباع"
+                qp.font.size = Pt(16)
+                qp.font.bold = True
+                qp.font.color.rgb = PRIMARY_COLOR
+                qp.alignment = PP_ALIGN.CENTER
+                
+                # Quartile mini cards
+                def add_quartile_card(slide, x, y, label, value, color):
+                    card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(1.95), Inches(0.75))
+                    card.fill.solid()
+                    card.fill.fore_color.rgb = RGBColor(250, 250, 250)
+                    card.line.color.rgb = color
+                    card.line.width = Pt(1.5)
+                    
+                    lbl = slide.shapes.add_textbox(Inches(x + 0.05), Inches(y + 0.08), Inches(1.85), Inches(0.3))
+                    ltf = lbl.text_frame
+                    lp = ltf.paragraphs[0]
+                    lp.text = label
+                    lp.font.size = Pt(10)
+                    lp.font.color.rgb = RGBColor(100, 100, 100)
+                    lp.alignment = PP_ALIGN.CENTER
+                    
+                    val = slide.shapes.add_textbox(Inches(x + 0.05), Inches(y + 0.38), Inches(1.85), Inches(0.3))
+                    vtf = val.text_frame
+                    vp = vtf.paragraphs[0]
+                    vp.text = f"{value:.2f}"
+                    vp.font.size = Pt(16)
+                    vp.font.bold = True
+                    vp.font.color.rgb = color
+                    vp.alignment = PP_ALIGN.CENTER
+                
+                add_quartile_card(slide, 6.2, 4.3, "الربع الأول (25%)", q1, RGBColor(239, 68, 68))
+                add_quartile_card(slide, 8.25, 4.3, "الوسيط (50%)", grade_median, RGBColor(234, 179, 8))
+                add_quartile_card(slide, 10.3, 4.3, "الربع الثالث (75%)", q3, RGBColor(34, 197, 94))
+                
+                # ===== INSIGHT BOX at bottom of histogram =====
+                insight_box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.2), Inches(5.1), Inches(5.8), Inches(1.1))
+                insight_box.fill.solid()
+                insight_box.fill.fore_color.rgb = RGBColor(255, 251, 235)
+                insight_box.line.color.rgb = skew_color
+                insight_box.line.width = Pt(2.5)
+                
+                # Insight title
+                ins_title = slide.shapes.add_textbox(Inches(0.3), Inches(5.15), Inches(5.6), Inches(0.35))
+                ins_tf = ins_title.text_frame
+                ins_p = ins_tf.paragraphs[0]
+                ins_p.text = "💡 تحليل شكل التوزيع"
+                ins_p.font.size = Pt(14)
+                ins_p.font.bold = True
+                ins_p.font.color.rgb = skew_color
+                ins_p.alignment = PP_ALIGN.RIGHT
+                set_paragraph_rtl(ins_p)
+                
+                # Insight text
+                ins_txt = slide.shapes.add_textbox(Inches(0.3), Inches(5.5), Inches(5.6), Inches(0.6))
+                ins_tf2 = ins_txt.text_frame
+                ins_tf2.word_wrap = True
+                ins_p2 = ins_tf2.paragraphs[0]
+                ins_p2.text = f"{skew_emoji} {skew_text}"
+                ins_p2.font.size = Pt(13)
+                ins_p2.font.color.rgb = RGBColor(60, 60, 60)
+                ins_p2.alignment = PP_ALIGN.RIGHT
+                set_paragraph_rtl(ins_p2)
+                
+                # Add skewness value
+                ins_p3 = ins_tf2.add_paragraph()
+                ins_p3.text = f"معامل الالتواء: {grade_skew:.3f}"
+                ins_p3.font.size = Pt(11)
+                ins_p3.font.color.rgb = RGBColor(100, 100, 100)
+                ins_p3.alignment = PP_ALIGN.RIGHT
+                set_paragraph_rtl(ins_p3)
                 
                 # Average by Subject
                 slide = add_content_slide(prs, "📚 متوسط المعدلات حسب المادة")
@@ -2193,41 +2613,145 @@ with col_ppt:
                 if img_stream:
                     slide.shapes.add_picture(img_stream, Inches(1), Inches(1.3), width=Inches(11))
                 
-                # Grade Distribution Histogram
-                slide = add_content_slide(prs, "📊 توزيع المعدلات")
-                
-                fig_hist = px.histogram(
-                    data_df,
-                    x='المعدل',
-                    nbins=20,
-                    color_discrete_sequence=['#636EFA']
-                )
-                fig_hist.add_vline(data_df['المعدل'].mean(), line_dash="dash", line_color="red",
-                                  annotation_text=f"المتوسط: {data_df['المعدل'].mean():.2f}")
-                fig_hist.update_layout(height=500, width=1100)
-                
-                img_stream = fig_to_image(fig_hist)
-                if img_stream:
-                    slide.shapes.add_picture(img_stream, Inches(1), Inches(1.3), width=Inches(11))
-                
                 # Box Plot
                 slide = add_content_slide(prs, "📊 توزيع المعدلات حسب المادة (مخطط صندوقي)")
                 
                 subject_data_ppt_list = []
+                subject_stats_for_insights = {}
                 for col in subject_columns:
                     if col in data_df.columns:
                         valid_data = data_df[col].dropna()
+                        if len(valid_data) > 0:
+                            subject_stats_for_insights[col] = {
+                                'median': valid_data.median(),
+                                'mean': valid_data.mean(),
+                                'std': valid_data.std(),
+                                'iqr': valid_data.quantile(0.75) - valid_data.quantile(0.25)
+                            }
                         for grade in valid_data:
                             subject_data_ppt_list.append({'المادة': col, 'التقدير': grade})
                 
                 if subject_data_ppt_list:
                     subject_box_df_ppt = pd.DataFrame(subject_data_ppt_list)
-                    fig_box = px.box(subject_box_df_ppt, x='المادة', y='التقدير', color='المادة')
-                    fig_box.update_layout(height=500, width=1100, showlegend=False)
+                    
+                    # Create colorful box plot with distinct colors for each subject
+                    fig_box = px.box(
+                        subject_box_df_ppt, 
+                        x='المادة', 
+                        y='التقدير', 
+                        color='المادة',
+                        color_discrete_sequence=px.colors.qualitative.Set2
+                    )
+                    fig_box.update_traces(
+                        marker=dict(size=4, opacity=0.7),
+                        line=dict(width=2)
+                    )
+                    fig_box.update_layout(
+                        height=340, 
+                        width=820, 
+                        showlegend=False,
+                        xaxis_title="المادة",
+                        yaxis_title="التقدير",
+                        margin=dict(t=15, b=35, l=40, r=20)
+                    )
                     
                     img_stream = fig_to_image(fig_box)
                     if img_stream:
-                        slide.shapes.add_picture(img_stream, Inches(1), Inches(1.3), width=Inches(11))
+                        slide.shapes.add_picture(img_stream, Inches(0.3), Inches(1.1), width=Inches(8.2))
+                
+                # ===== INSIGHTS PANEL on the right =====
+                if subject_stats_for_insights:
+                    # Find best and worst subjects
+                    best_subject = max(subject_stats_for_insights.items(), key=lambda x: x[1]['median'])
+                    worst_subject = min(subject_stats_for_insights.items(), key=lambda x: x[1]['median'])
+                    most_varied = max(subject_stats_for_insights.items(), key=lambda x: x[1]['std'])
+                    most_consistent = min(subject_stats_for_insights.items(), key=lambda x: x[1]['std'])
+                    
+                    # Insights title
+                    ins_title = slide.shapes.add_textbox(Inches(8.6), Inches(1.1), Inches(4.5), Inches(0.4))
+                    itf = ins_title.text_frame
+                    ip = itf.paragraphs[0]
+                    ip.text = "💡 رؤى تحليلية"
+                    ip.font.size = Pt(18)
+                    ip.font.bold = True
+                    ip.font.color.rgb = PRIMARY_COLOR
+                    ip.alignment = PP_ALIGN.RIGHT
+                    set_paragraph_rtl(ip)
+                    
+                    # Insight card function
+                    def add_insight_card(slide, x, y, icon, title, subject, value, bg_color, border_color):
+                        card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(4.3), Inches(0.85))
+                        card.fill.solid()
+                        card.fill.fore_color.rgb = bg_color
+                        card.line.color.rgb = border_color
+                        card.line.width = Pt(2)
+                        
+                        txt = slide.shapes.add_textbox(Inches(x + 0.1), Inches(y + 0.1), Inches(4.1), Inches(0.35))
+                        tf = txt.text_frame
+                        p = tf.paragraphs[0]
+                        p.text = f"{icon} {title}"
+                        p.font.size = Pt(12)
+                        p.font.bold = True
+                        p.font.color.rgb = border_color
+                        p.alignment = PP_ALIGN.RIGHT
+                        set_paragraph_rtl(p)
+                        
+                        val_txt = slide.shapes.add_textbox(Inches(x + 0.1), Inches(y + 0.45), Inches(4.1), Inches(0.35))
+                        vtf = val_txt.text_frame
+                        vp = vtf.paragraphs[0]
+                        vp.text = f"{subject}: {value}"
+                        vp.font.size = Pt(13)
+                        vp.font.color.rgb = RGBColor(55, 65, 81)
+                        vp.alignment = PP_ALIGN.RIGHT
+                        set_paragraph_rtl(vp)
+                    
+                    # Best subject
+                    add_insight_card(slide, 8.6, 1.55, "🏆", "أفضل مادة (أعلى وسيط)", 
+                                    best_subject[0], f"{best_subject[1]['median']:.2f}",
+                                    RGBColor(220, 252, 231), RGBColor(22, 163, 74))
+                    
+                    # Worst subject
+                    add_insight_card(slide, 8.6, 2.5, "⚠️", "أضعف مادة (أدنى وسيط)", 
+                                    worst_subject[0], f"{worst_subject[1]['median']:.2f}",
+                                    RGBColor(254, 226, 226), RGBColor(220, 38, 38))
+                    
+                    # Most varied
+                    add_insight_card(slide, 8.6, 3.45, "📊", "أكثر تفاوتاً (أعلى انحراف)", 
+                                    most_varied[0], f"σ = {most_varied[1]['std']:.2f}",
+                                    RGBColor(254, 249, 195), RGBColor(202, 138, 4))
+                    
+                    # Most consistent
+                    add_insight_card(slide, 8.6, 4.4, "✅", "أكثر اتساقاً (أدنى انحراف)", 
+                                    most_consistent[0], f"σ = {most_consistent[1]['std']:.2f}",
+                                    RGBColor(219, 234, 254), RGBColor(37, 99, 235))
+                
+                # Add "How to read this chart" explanation box at bottom
+                how_to_box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.3), Inches(5.4), Inches(12.8), Inches(0.95))
+                how_to_box.fill.solid()
+                how_to_box.fill.fore_color.rgb = RGBColor(240, 249, 255)
+                how_to_box.line.color.rgb = RGBColor(59, 130, 246)
+                how_to_box.line.width = Pt(2)
+                
+                # Title
+                how_title = slide.shapes.add_textbox(Inches(0.5), Inches(5.45), Inches(12.4), Inches(0.35))
+                htf = how_title.text_frame
+                hp = htf.paragraphs[0]
+                hp.text = "📖 كيفية قراءة هذا الرسم البياني:"
+                hp.font.size = Pt(13)
+                hp.font.bold = True
+                hp.font.color.rgb = RGBColor(30, 64, 175)
+                hp.alignment = PP_ALIGN.RIGHT
+                set_paragraph_rtl(hp)
+                
+                # Explanation text
+                how_txt = slide.shapes.add_textbox(Inches(0.5), Inches(5.8), Inches(12.4), Inches(0.5))
+                htf2 = how_txt.text_frame
+                htf2.word_wrap = True
+                hp2 = htf2.paragraphs[0]
+                hp2.text = "الخط في المنتصف = الوسيط  |  الصندوق = 50% من البيانات  |  الخطوط الممتدة = المدى  |  النقاط = القيم الشاذة"
+                hp2.font.size = Pt(11)
+                hp2.font.color.rgb = RGBColor(55, 65, 81)
+                hp2.alignment = PP_ALIGN.CENTER
                 
                 # Top 10 Students
                 slide = add_content_slide(prs, "🏆 أفضل 10 تلاميذ")
@@ -2951,3 +3475,4 @@ with col_ppt:
                 file_name=f"student_statistics_{'_'.join(selected_classes_ppt)}.pptx",
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
             )
+
