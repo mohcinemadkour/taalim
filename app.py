@@ -12,7 +12,6 @@ import io
 import tempfile
 import os
 import arabic_reshaper
-from bidi.algorithm import get_display
 
 # Set page config
 st.set_page_config(page_title="إحصائيات التلاميذ", layout="wide")
@@ -119,8 +118,7 @@ def fix_arabic(text):
     try:
         # Check if text contains Arabic characters
         if any('\u0600' <= char <= '\u06FF' for char in text):
-            reshaped_text = arabic_reshaper.reshape(text)
-            return get_display(reshaped_text)
+            return arabic_reshaper.reshape(text)
     except Exception:
         pass
     return text

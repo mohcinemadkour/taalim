@@ -9,4 +9,3 @@ kaleido
 statsmodels
 lxml
 arabic-reshaper
-python-bidi
