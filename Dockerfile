@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y \
     fonts-liberation \
     fonts-noto-cjk \
     fonts-noto-color-emoji \
+    fonts-noto-ui-arabic \
+    fonts-arabeyes \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variable for Kaleido to find Chromium

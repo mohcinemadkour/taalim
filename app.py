@@ -11,6 +11,8 @@ from pptx.enum.shapes import MSO_SHAPE
 import io
 import tempfile
 import os
+import arabic_reshaper
+from bidi.algorithm import get_display
 
 # Set page config
 st.set_page_config(page_title="إحصائيات التلاميذ", layout="wide")
@@ -108,6 +110,20 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# ============ ARABIC TEXT FIXER ============
+def fix_arabic(text):
+    """Reshape and reorder Arabic text for correct rendering in Plotly/Charts"""
+    if not text or not isinstance(text, str):
+        return text
+    try:
+        # Check if text contains Arabic characters
+        if any('\u0600' <= char <= '\u06FF' for char in text):
+            reshaped_text = arabic_reshaper.reshape(text)
+            return get_display(reshaped_text)
+    except Exception:
+        pass
+    return text
 
 
 # ============ POWERPOINT GENERATION IMPORTS & HELPERS ============
@@ -577,7 +593,7 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
     
     # 3D-style Donut Pie chart
     fig_pie = go.Figure(data=[go.Pie(
-        labels=['دون المعدل<br>(0-9.99)', 'متوسط<br>(10-11.99)', 'جيد/ممتاز<br>(12-20)'],
+        labels=[fix_arabic('دون المعدل<br>(0-9.99)'), fix_arabic('متوسط<br>(10-11.99)'), fix_arabic('جيد/ممتاز<br>(12-20)')],
         values=[below_avg_count, avg_count, good_count],
         hole=0.35,
         marker=dict(colors=['#EF553B', '#FECB52', '#00CC96'], line=dict(color='white', width=3)),
@@ -593,7 +609,7 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
         showlegend=True,
         legend=dict(orientation="h", yanchor="bottom", y=-0.08, xanchor="center", x=0.5, font=dict(size=16)),
         height=680, width=750, margin=dict(t=5, b=40, l=5, r=5), paper_bgcolor='rgba(0,0,0,0)',
-        annotations=[dict(text=f'<b>{total}</b><br>تلميذ', x=0.5, y=0.5, font=dict(size=26, color='#333'), showarrow=False)]
+        annotations=[dict(text=f'<b>{total}</b><br>{fix_arabic("تلميذ")}', x=0.5, y=0.5, font=dict(size=26, color='#333'), showarrow=False)]
     )
     
     img_stream = fig_to_image(fig_pie)
@@ -621,10 +637,10 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
     
     fig_hist = go.Figure()
     fig_hist.add_trace(go.Histogram(x=grades, nbinsx=20, marker=dict(color='rgba(99, 110, 250, 0.7)', line=dict(color='rgba(99, 110, 250, 1)', width=1))))
-    fig_hist.add_vline(x=grade_mean, line_dash="dash", line_color="red", line_width=2, annotation_text=f"المتوسط: {grade_mean:.2f}", annotation_position="top right")
-    fig_hist.add_vline(x=grade_median, line_dash="dot", line_color="green", line_width=2, annotation_text=f"الوسيط: {grade_median:.2f}", annotation_position="top left")
-    fig_hist.add_vline(x=10, line_dash="solid", line_color="orange", line_width=2, annotation_text="حد النجاح (10)", annotation_position="bottom right")
-    fig_hist.update_layout(height=380, width=580, xaxis_title="المعدل", yaxis_title="عدد التلاميذ", showlegend=False, margin=dict(t=20, b=40, l=40, r=20))
+    fig_hist.add_vline(x=grade_mean, line_dash="dash", line_color="red", line_width=2, annotation_text=f"{fix_arabic('المتوسط')}: {grade_mean:.2f}", annotation_position="top right")
+    fig_hist.add_vline(x=grade_median, line_dash="dot", line_color="green", line_width=2, annotation_text=f"{fix_arabic('الوسيط')}: {grade_median:.2f}", annotation_position="top left")
+    fig_hist.add_vline(x=10, line_dash="solid", line_color="orange", line_width=2, annotation_text=fix_arabic("حد النجاح (10)"), annotation_position="bottom right")
+    fig_hist.update_layout(height=380, width=580, xaxis_title=fix_arabic("المعدل"), yaxis_title=fix_arabic("عدد التلاميذ"), showlegend=False, margin=dict(t=20, b=40, l=40, r=20))
     
     img_stream = fig_to_image(fig_hist)
     if img_stream:
@@ -688,9 +704,9 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
     stats_df_ppt = pd.DataFrame(stats_data_ppt)
     stats_df_sorted = stats_df_ppt.sort_values('المتوسط', ascending=True)
     colors = ['#00CC96' if v >= 12 else ('#FECB52' if v >= 10 else '#EF553B') for v in stats_df_sorted['المتوسط']]
-    fig_bar = go.Figure(go.Bar(y=stats_df_sorted['المادة'], x=stats_df_sorted['المتوسط'], orientation='h', marker=dict(color=colors, line=dict(color='white', width=1)), text=[f"{v:.2f}" for v in stats_df_sorted['المتوسط']], textposition='outside'))
-    fig_bar.add_vline(x=10, line_dash="dash", line_color="orange", line_width=2, annotation_text="حد النجاح", annotation_position="top")
-    fig_bar.update_layout(height=420, width=720, xaxis_title="المتوسط", yaxis_title="", showlegend=False, margin=dict(t=20, b=40, l=120, r=50), xaxis=dict(range=[0, 20]))
+    fig_bar = go.Figure(go.Bar(y=[fix_arabic(m) for m in stats_df_sorted['المادة']], x=stats_df_sorted['المتوسط'], orientation='h', marker=dict(color=colors, line=dict(color='white', width=1)), text=[f"{v:.2f}" for v in stats_df_sorted['المتوسط']], textposition='outside'))
+    fig_bar.add_vline(x=10, line_dash="dash", line_color="orange", line_width=2, annotation_text=fix_arabic("حد النجاح"), annotation_position="top")
+    fig_bar.update_layout(height=420, width=720, xaxis_title=fix_arabic("المتوسط"), yaxis_title="", showlegend=False, margin=dict(t=20, b=40, l=120, r=50), xaxis=dict(range=[0, 20]))
     img_stream = fig_to_image(fig_bar)
     if img_stream: slide.shapes.add_picture(img_stream, Inches(0.2), Inches(1.15), width=Inches(7.2))
     
@@ -724,10 +740,10 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
             if len(sub_data) > 0: subject_failure_ppt.append({'المادة': col, 'نسبة الرسوب': (sub_data < 10).mean() * 100})
     if subject_failure_ppt:
         fdf = pd.DataFrame(subject_failure_ppt).sort_values('نسبة الرسوب', ascending=False)
-        fig_f = px.bar(fdf, x='المادة', y='نسبة الرسوب', color='نسبة الرسوب', color_continuous_scale='RdYlGn_r', text='نسبة الرسوب')
+        fig_f = px.bar(fdf, x=[fix_arabic(m) for m in fdf['المادة']], y='نسبة الرسوب', color='نسبة الرسوب', color_continuous_scale='RdYlGn_r', text='نسبة الرسوب')
         fig_f.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
-        fig_f.update_layout(height=450, width=1000)
-        fig_f.add_hline(y=50, line_dash="dash", line_color="red", annotation_text="خط الخطر")
+        fig_f.update_layout(height=450, width=1000, xaxis_title=fix_arabic("المادة"), yaxis_title=fix_arabic("نسبة الرسوب"))
+        fig_f.add_hline(y=50, line_dash="dash", line_color="red", annotation_text=fix_arabic("خط الخطر"))
         img_stream = fig_to_image(fig_f)
         if img_stream: slide.shapes.add_picture(img_stream, Inches(1.5), Inches(1.3), width=Inches(10))
     
@@ -741,8 +757,9 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
             for g in vd: sdata_list.append({'المادة': col, 'التقدير': g})
     if sdata_list:
         sbdf = pd.DataFrame(sdata_list)
-        fig_b = px.box(sbdf, x='المادة', y='التقدير', color='المادة', color_discrete_sequence=px.colors.qualitative.Set2)
-        fig_b.update_layout(height=700, width=1200, showlegend=False, xaxis_title="المادة", yaxis_title="التقدير", font=dict(size=16), margin=dict(t=30, b=60, l=60, r=30))
+        sbdf['المادة_fixed'] = sbdf['المادة'].apply(fix_arabic)
+        fig_b = px.box(sbdf, x='المادة_fixed', y='التقدير', color='المادة_fixed', color_discrete_sequence=px.colors.qualitative.Set2)
+        fig_b.update_layout(height=700, width=1200, showlegend=False, xaxis_title=fix_arabic("المادة"), yaxis_title=fix_arabic("التقدير"), font=dict(size=16), margin=dict(t=30, b=60, l=60, r=30))
         img_stream = fig_to_image(fig_b)
         if img_stream: slide.shapes.add_picture(img_stream, Inches(0.3), Inches(1.1), width=Inches(7.8))
         if sstats:
@@ -835,9 +852,9 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
         p.space_after = Pt(8)
         p.alignment = PP_ALIGN.RIGHT
         set_paragraph_rtl(p)
-    comparison_df_ppt = pd.DataFrame({'المجال': ['المواد العلمية', 'المواد الأدبية'], 'المتوسط': [science_avg_ppt, humanities_avg_ppt]})
-    fig_comparison = px.bar(comparison_df_ppt, x='المجال', y='المتوسط', color='المجال', 
-                           color_discrete_map={'المواد العلمية': '#636EFA', 'المواد الأدبية': '#EF553B'}, text='المتوسط')
+    comparison_df_ppt = pd.DataFrame({fix_arabic('المجال'): [fix_arabic('المواد العلمية'), fix_arabic('المواد الأدبية')], fix_arabic('المتوسط'): [science_avg_ppt, humanities_avg_ppt]})
+    fig_comparison = px.bar(comparison_df_ppt, x=fix_arabic('المجال'), y=fix_arabic('المتوسط'), color=fix_arabic('المجال'), 
+                           color_discrete_map={fix_arabic('المواد العلمية'): '#636EFA', fix_arabic('المواد الأدبية'): '#EF553B'}, text=fix_arabic('المتوسط'))
     fig_comparison.update_traces(texttemplate='%{text:.2f}', textposition='outside')
     fig_comparison.update_layout(height=400, width=500, showlegend=False)
     fig_comparison.add_hline(y=10, line_dash="dash", line_color="green")
@@ -873,7 +890,7 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
             p.space_after = Pt(6)
             p.alignment = PP_ALIGN.RIGHT
             set_paragraph_rtl(p)
-        fig_enr = px.bar(enrichment_df_ppt, x='المادة', y='المتوسط', color='المتوسط', color_continuous_scale='RdYlGn', text='المتوسط')
+        fig_enr = px.bar(enrichment_df_ppt, x=[fix_arabic(m) for m in enrichment_df_ppt['المادة']], y='المتوسط', color='المتوسط', color_continuous_scale='RdYlGn', text='المتوسط')
         fig_enr.update_traces(texttemplate='%{text:.2f}', textposition='outside')
         fig_enr.update_layout(height=500, width=650, showlegend=False)
         fig_enr.add_hline(y=10, line_dash="dash", line_color="green")
@@ -886,10 +903,10 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
     ar_pass_ppt = (data_df['اللغة العربية'].dropna() >= 10).mean() * 100 if 'اللغة العربية' in data_df.columns else 0
     fr_pass_ppt = (data_df['اللغة الفرنسية'].dropna() >= 10).mean() * 100 if 'اللغة الفرنسية' in data_df.columns else 0
     en_pass_ppt = (data_df['اللغة الإنجليزية'].dropna() >= 10).mean() * 100 if 'اللغة الإنجليزية' in data_df.columns else 0
-    pass_df_ppt = pd.DataFrame({'اللغة': ['العربية', 'الفرنسية', 'الإنجليزية'], 'نسبة النجاح %': [ar_pass_ppt, fr_pass_ppt, en_pass_ppt]})
-    fig_pass = px.bar(pass_df_ppt, x='اللغة', y='نسبة النجاح %', color='نسبة النجاح %', color_continuous_scale='RdYlGn', text='نسبة النجاح %')
+    pass_df_ppt = pd.DataFrame({fix_arabic('اللغة'): [fix_arabic('العربية'), fix_arabic('الفرنسية'), fix_arabic('الإنجليزية')], fix_arabic('نسبة النجاح %'): [ar_pass_ppt, fr_pass_ppt, en_pass_ppt]})
+    fig_pass = px.bar(pass_df_ppt, x=fix_arabic('اللغة'), y=fix_arabic('نسبة النجاح %'), color=fix_arabic('نسبة النجاح %'), color_continuous_scale='RdYlGn', text=fix_arabic('نسبة النجاح %'))
     fig_pass.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
-    fig_pass.update_layout(height=400, width=500, title="نسبة النجاح في كل لغة (≥10)")
+    fig_pass.update_layout(height=400, width=500, title=fix_arabic("نسبة النجاح في كل لغة (≥10)"))
     img_stream_pass = fig_to_image(fig_pass)
     if img_stream_pass:
         slide.shapes.add_picture(img_stream_pass, Inches(0.5), Inches(1.3), width=Inches(6))
@@ -929,10 +946,10 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
         p.text = line
         p.font.size, p.alignment, p.space_after = Pt(22), PP_ALIGN.RIGHT, Pt(8)
         set_paragraph_rtl(p)
-    lang_df_ppt = pd.DataFrame({'اللغة': ['العربية', 'الفرنسية', 'الإنجليزية'], 'المتوسط': [arabic_avg_ppt, french_avg_ppt, english_avg_ppt], 'النوع': ['اللغة الأم', 'لغة أجنبية', 'لغة أجنبية']})
-    fig_lang = px.bar(lang_df_ppt, x='اللغة', y='المتوسط', color='النوع', color_discrete_map={'اللغة الأم': '#00CC96', 'لغة أجنبية': '#EF553B'}, text='المتوسط')
+    lang_df_ppt = pd.DataFrame({fix_arabic('اللغة'): [fix_arabic('العربية'), fix_arabic('الفرنسية'), fix_arabic('الإنجليزية')], fix_arabic('المتوسط'): [arabic_avg_ppt, french_avg_ppt, english_avg_ppt], fix_arabic('النوع'): [fix_arabic('اللغة الأم'), fix_arabic('لغة أجنبية'), fix_arabic('لغة أجنبية')]})
+    fig_lang = px.bar(lang_df_ppt, x=fix_arabic('اللغة'), y=fix_arabic('المتوسط'), color=fix_arabic('النوع'), color_discrete_map={fix_arabic('اللغة الأم'): '#00CC96', fix_arabic('لغة أجنبية'): '#EF553B'}, text=fix_arabic('المتوسط'))
     fig_lang.update_traces(texttemplate='%{text:.2f}', textposition='outside')
-    fig_lang.update_layout(height=400, width=500, showlegend=True)
+    fig_lang.update_layout(height=400, width=500, showlegend=True, xaxis_title=fix_arabic("اللغة"), yaxis_title=fix_arabic("المتوسط"))
     fig_lang.add_hline(y=10, line_dash="dash", line_color="gray")
     img_stream = fig_to_image(fig_lang)
     if img_stream: slide.shapes.add_picture(img_stream, Inches(0.5), Inches(1.3), width=Inches(6))
@@ -952,9 +969,9 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
             pos_gap = sum(1 for g in valid_gaps_ppt if g > 1)
             neg_gap = sum(1 for g in valid_gaps_ppt if g < -1)
             balanced = len(valid_gaps_ppt) - pos_gap - neg_gap
-            fig_gap_hist = px.histogram(pd.DataFrame({'الفجوة': valid_gaps_ppt}), x='الفجوة', nbins=20, color_discrete_sequence=['#636EFA'])
-            fig_gap_hist.add_vline(x=0, line_dash="dash", line_color="red", annotation_text="توازن")
-            fig_gap_hist.update_layout(title="توزيع الفجوة اللغوية", height=400, width=550)
+            fig_gap_hist = px.histogram(pd.DataFrame({fix_arabic('الفجوة'): valid_gaps_ppt}), x=fix_arabic('الفجوة'), nbins=20, color_discrete_sequence=['#636EFA'])
+            fig_gap_hist.add_vline(x=0, line_dash="dash", line_color="red", annotation_text=fix_arabic("توازن"))
+            fig_gap_hist.update_layout(title=fix_arabic("توزيع الفجوة اللغوية"), height=400, width=550, xaxis_title=fix_arabic("الفجوة"), yaxis_title=fix_arabic("عدد التلاميذ"))
             img_stream_gap = fig_to_image(fig_gap_hist)
             if img_stream_gap: slide.shapes.add_picture(img_stream_gap, Inches(0.3), Inches(1.3), width=Inches(6.2))
             gap_analysis = f"📊 تحليل الفجوة اللغوية:\n\n📈 أفضل في العربية: {pos_gap} تلميذ ({pos_gap/len(valid_gaps_ppt)*100:.1f}%)\n⚖️ متوازن: {balanced} تلميذ ({balanced/len(valid_gaps_ppt)*100:.1f}%)\n🌍 أفضل في الأجنبية: {neg_gap} تلميذ ({neg_gap/len(valid_gaps_ppt)*100:.1f}%)\n\n"
@@ -989,7 +1006,7 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
         add_corr_card(slide, 6.7, 1.2, 6, 1.0, "📊", "متوسط الارتباط العام", "قياس العلاقة بين جميع المواد", f"{avg_corr:.2f}", avg_bg, avg_color)
         if strongest is not None:
             add_corr_card(slide, 6.7, 2.3, 6, 1.0, "🔗", "أقوى ارتباط", f"{strongest['المادة 1']} ↔ {strongest['المادة 2']}", f"معامل الارتباط: {strongest['الارتباط']:.2f}", RGBColor(219, 234, 254), RGBColor(37, 99, 235))
-        fig_corr = px.imshow(corr_matrix, labels=dict(x="المادة", y="المادة", color="الارتباط"), x=corr_subjects, y=corr_subjects, color_continuous_scale='RdBu_r', zmin=-1, zmax=1, text_auto='.2f')
+        fig_corr = px.imshow(corr_matrix, labels=dict(x=fix_arabic("المادة"), y=fix_arabic("المادة"), color=fix_arabic("الارتباط")), x=[fix_arabic(s) for s in corr_subjects], y=[fix_arabic(s) for s in corr_subjects], color_continuous_scale='RdBu_r', zmin=-1, zmax=1, text_auto='.2f')
         fig_corr.update_layout(height=800, width=900, margin=dict(t=20, b=60, l=60, r=40), font=dict(size=14))
         img_stream = fig_to_image(fig_corr)
         if img_stream: slide.shapes.add_picture(img_stream, Inches(0.2), Inches(1.1), width=Inches(6.3))
