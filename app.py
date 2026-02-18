@@ -250,6 +250,7 @@ def add_content_slide(prs, title, slide_num=None):
         np.alignment = PP_ALIGN.CENTER
     return slide
 
+@st.cache_resource
 def check_kaleido_available():
     try:
         import kaleido
@@ -1059,6 +1060,7 @@ def generate_slides_for_data(prs, data_df, subject_columns, selected_classes_ppt
     set_paragraph_rtl(tp)
 
 # ============ GENDER DETECTION FUNCTION ============
+@st.cache_data
 def detect_gender(name):
     """
     Detect gender from Arabic/Moroccan first names.
@@ -1126,6 +1128,7 @@ def detect_gender(name):
     # Default to unknown
     return 'U'
 
+@st.cache_data
 def get_gender_stats(df, name_column='اسم التلميذ'):
     """Calculate gender statistics from a dataframe."""
     if name_column not in df.columns:
@@ -1139,6 +1142,48 @@ def get_gender_stats(df, name_column='اسم التلميذ'):
         'F': stats.get('F', 0),
         'U': stats.get('U', 0)
     }
+
+@st.cache_data
+def calculate_subject_stats(df, subject_columns):
+    """Calculate detailed statistics for each subject."""
+    stats_data = []
+    for col in subject_columns:
+        if col in df.columns:
+            valid_data = df[col].dropna()
+            if len(valid_data) > 0:
+                stats_data.append({
+                    'المادة': col,
+                    'المتوسط': valid_data.mean(),
+                    'الأعلى': valid_data.max(),
+                    'الأقل': valid_data.min(),
+                    'الانحراف المعياري': valid_data.std(),
+                    'عدد الطلاب': len(valid_data)
+                })
+    return pd.DataFrame(stats_data)
+
+@st.cache_data
+def calculate_student_orientation(df, science_subjects, humanities_subjects):
+    """Calculate average scores for science and humanities for each student."""
+    student_science_avg = []
+    student_humanities_avg = []
+    
+    for idx, row in df.iterrows():
+        sci_vals = [row[col] for col in science_subjects if col in df.columns and pd.notna(row.get(col))]
+        hum_vals = [row[col] for col in humanities_subjects if col in df.columns and pd.notna(row.get(col))]
+        
+        student_science_avg.append(np.mean(sci_vals) if sci_vals else np.nan)
+        student_humanities_avg.append(np.mean(hum_vals) if hum_vals else np.nan)
+    
+    return student_science_avg, student_humanities_avg
+
+@st.cache_data
+def calculate_enrichment_stats(df, enrichment_subjects):
+    """Calculate enrichment scores for each student."""
+    student_enrichment_avg = []
+    for idx, row in df.iterrows():
+        enr_vals = [row[col] for col in enrichment_subjects if col in df.columns and pd.notna(row.get(col))]
+        student_enrichment_avg.append(np.mean(enr_vals) if enr_vals else np.nan)
+    return student_enrichment_avg
 
 # File uploader in sidebar
 st.sidebar.header("📁 تحميل الملف")
@@ -1515,22 +1560,8 @@ st.markdown("---")
 # Detailed Statistics by Subject
 st.header("📚 إحصائيات حسب المادة")
 
-# Calculate statistics for each subject
-stats_data = []
-for col in subject_columns:
-    if col in df_filtered.columns:
-        valid_data = df_filtered[col].dropna()
-        if len(valid_data) > 0:
-            stats_data.append({
-                'المادة': col,
-                'المتوسط': valid_data.mean(),
-                'الأعلى': valid_data.max(),
-                'الأقل': valid_data.min(),
-                'الانحراف المعياري': valid_data.std(),
-                'عدد الطلاب': len(valid_data)
-            })
-
-stats_df = pd.DataFrame(stats_data)
+# Calculate statistics for each subject using cached function
+stats_df = calculate_subject_stats(df_filtered, subject_columns)
 
 # Display table
 st.dataframe(
@@ -1665,16 +1696,8 @@ for col in humanities_subjects:
 science_avg = np.mean(science_scores) if science_scores else 0
 humanities_avg = np.mean(humanities_scores) if humanities_scores else 0
 
-# Per-student comparison
-student_science_avg = []
-student_humanities_avg = []
-
-for idx, row in df_filtered.iterrows():
-    sci_vals = [row[col] for col in science_subjects if col in df_filtered.columns and pd.notna(row.get(col))]
-    hum_vals = [row[col] for col in humanities_subjects if col in df_filtered.columns and pd.notna(row.get(col))]
-    
-    student_science_avg.append(np.mean(sci_vals) if sci_vals else np.nan)
-    student_humanities_avg.append(np.mean(hum_vals) if hum_vals else np.nan)
+# Per-student comparison using cached function
+student_science_avg, student_humanities_avg = calculate_student_orientation(df_filtered, science_subjects, humanities_subjects)
 
 # Display comparison
 col1, col2, col3 = st.columns(3)
@@ -1827,14 +1850,8 @@ for i, col_name in enumerate(enrichment_subjects):
 if student_science_avg and student_humanities_avg and len(student_science_avg) == len(student_humanities_avg):
     st.markdown("### 📊 أداء مواد التفتح حسب توجه التلميذ")
     
-    # Calculate enrichment average for each student
-    student_enrichment_avg = []
-    for idx, row in df_filtered.iterrows():
-        enr_vals = [row[col] for col in enrichment_subjects if col in df_filtered.columns and pd.notna(row.get(col))]
-        if enr_vals:
-            student_enrichment_avg.append(np.mean(enr_vals))
-        else:
-            student_enrichment_avg.append(np.nan)
+    # Calculate enrichment average for each student using cached function
+    student_enrichment_avg = calculate_enrichment_stats(df_filtered, enrichment_subjects)
     
     df_filtered_copy['معدل_التفتح'] = student_enrichment_avg[:len(df_filtered)]
     
