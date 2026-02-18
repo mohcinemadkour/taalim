@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
     fonts-liberation \
     fonts-noto-cjk \
     fonts-noto-color-emoji \
-    fonts-noto-ui-arabic \
+    fonts-noto-ui-core \
     fonts-arabeyes \
     && rm -rf /var/lib/apt/lists/*
 
